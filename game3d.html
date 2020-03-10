@@ -65,6 +65,7 @@ window.addEventListener('keydown', onKeyDown);
 window.addEventListener('keyup', onKeyUp);
 
 class world{
+   vertOrder = [0,1,2,2,3,0]
    quads=[]
    vertices=[]
    colors=[]
@@ -92,13 +93,7 @@ class world{
          quad.c.insertSelf(this.vertices);
          quad.color.insertSelf(this.colors);
 
-         quad.c.insertSelf(this.vertices);
-         quad.color.insertSelf(this.colors);
-
          quad.d.insertSelf(this.vertices);
-         quad.color.insertSelf(this.colors);
-
-         quad.a.insertSelf(this.vertices);
          quad.color.insertSelf(this.colors);
 
 
@@ -106,9 +101,10 @@ class world{
          
       }
 
-      for(var i=0;i<this.quads.length*6;i++){
-         this.indices.push(i);
+      for(var i=0;i<this.quads.length;i++){
+         this.vertOrder.forEach((subIndex)=>this.indices.push(i*4+subIndex))
       }
+      console.log(this.indices)
       
    }
    getVertices(){
@@ -298,7 +294,8 @@ var vertCode = `attribute vec3 position;
             varying vec3 worldPos;
             
             void main(void) {
-               gl_FragColor = vec4((1.-length(worldPos)/(12.))*vColor, 1.);
+               float sF= worldPos.x<0.&&worldPos.z<0.?(1.-length(worldPos)/(12.)):1.;
+               gl_FragColor = vec4(sF*vColor, 1.);
             }`;
 
 
