@@ -148,18 +148,20 @@ class mazeMesh{ //square
             if(this.queryMaze(i,j,0,-1)==0)
             this.quads.push(new quad3(new vec3(-subunitScale,height,-subunitScale).translate(worldOffset),new vec3(-subunitScale,height,subunitScale).translate(worldOffset),new vec3(-subunitScale,0,subunitScale).translate(worldOffset),new vec3(-subunitScale,0,-subunitScale).translate(worldOffset),new vec3(1,0,1)));
             
+            
+            this.quads.push(new quad3(new vec3(-subunitScale,0,subunitScale).translate(worldOffset),new vec3(subunitScale,0,subunitScale).translate(worldOffset),new vec3(subunitScale,0,-subunitScale).translate(worldOffset),new vec3(-subunitScale,0,-subunitScale).translate(worldOffset),new vec3(1,0.5,0.5)));
+
+//1,0.,0.5 
+this.quads.push(new quad3(new vec3(-subunitScale,height,subunitScale).translate(worldOffset),new vec3(subunitScale,height,subunitScale).translate(worldOffset),new vec3(subunitScale,height,-subunitScale).translate(worldOffset),new vec3(-subunitScale,height,-subunitScale).translate(worldOffset),new vec3(1,0,0.5 )));
+
+
 
          }
       }
 
       //1,0.5,0.5
    
-      this.quads.push(new quad3(new vec3(-subunitScale*size,0,subunitScale*size),new vec3(subunitScale*size,0,subunitScale*size),new vec3(subunitScale*size,0,-subunitScale*size),new vec3(-subunitScale*size,0,-subunitScale*size),new vec3(1,0.5,0.5)));
-
-           //1,0.,0.5 
-           this.quads.push(new quad3(new vec3(-subunitScale*size,height,subunitScale*size),new vec3(subunitScale*size,height,subunitScale*size),new vec3(subunitScale*size,height,-subunitScale*size),new vec3(-subunitScale*size,height,-subunitScale*size),new vec3(1,0,0.5 )));
-
-
+   
    }
    addSelfToWorld(w){
       this.quads.forEach((q)=>w.addQuad(q))
