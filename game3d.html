@@ -33,8 +33,7 @@ function multMat4sAsArrays(mat1,mat2){
          for(var k=0;k<4;k++){
             mat1Index=i*4+k;
             mat2Index=k*4+j;
-           // console.log(mat1Index)
-            //console.log(mat2Index)
+        
             total=total+mat1[mat1Index]*mat2[mat2Index];
          }
          result[resIndex]=total;
@@ -126,9 +125,9 @@ class mazeMesh{ //square
             continue;
 
             var worldXCell = j-floor(size/2.0);
-            console.log(worldXCell)
+         
             var worldZCell = floor(size/2.0)-i;
-            if(Math.abs(worldZCell-pXCell)<=1&&Math.abs(worldXCell-pZCell)<=1){
+            if(Math.abs(worldZCell-pXCell)<=3&&Math.abs(worldXCell-pZCell)<=3){
 
             } else{
                continue;
@@ -411,18 +410,13 @@ class vec3{
 gameWorld = new world();
 var sector1;
 function loadGame(){
- /*  var materialSource=`
+   var materialSource=`
    float tiling=2.;
    float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
    float lightVal=(1.-length(worldPos-playerVec)/drawDistance);
    finalColor=squareVal*lightVal*vec3(1.,1.,1.);
-   `;*/
-      var materialSource=`
-   float tiling=2.;
-   float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
-   float lightVal=(1.-length(worldPos-playerVec)/drawDistance);
-   finalColor=squareVal*vec3(1.,1.,1.);
    `;
+
    var material=new material3(materialSource,new vec3(1,0,1),[{type:'float',name:'drawDistance'}]);
    
    gameWorld.addMaterial(material);
@@ -517,7 +511,7 @@ var vertCode = `attribute vec3 position;
             }`;*/
             var fragCode=gameWorld.getFragCode();
             console.log(fragCode)
-            console.log(fragCode)
+          
 
          var vertShader = gl.createShader(gl.VERTEX_SHADER);
          gl.shaderSource(vertShader, vertCode);
@@ -550,13 +544,12 @@ if (message.length > 0) {
          var Vmatrix = gl.getUniformLocation(shaderProgram, "Vmatrix");
          var Mmatrix = gl.getUniformLocation(shaderProgram, "Mmatrix");
          var gameTime=gl.getUniformLocation(shaderProgram, "gameTime");
-         console.log(Mmatrix)
-         console.log(gameTime)
+      
          var pVec=gl.getUniformLocation(shaderProgram, "playerVec");
        
-         console.log(pVec)
+     
          var dD=gl.getUniformLocation(shaderProgram,'drawDistance');
-         console.log(dD);
+      
          
 
          gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
@@ -593,7 +586,7 @@ if (message.length > 0) {
          var playerVec = new vec3(0,2,0);
          
          function cellChanged(newpXCell,newpZCell){
-         console.log(newpXCell+"|"+newpZCell)
+        
          pXCell=newpXCell;
            pZCell=newpZCell;
             sector1.build();
@@ -700,11 +693,7 @@ if (message.length > 0) {
             
             rotateX(view_matrix,-playerPitch)
             view_matrix=translated(view_matrix,new vec3(playerVec.z,playerVec.y,playerVec.x).scale(-1));
-            //console.log(mov_matrix);
-           
-         
-
-          //  rotateX(mov_matrix, dt*0.003);
+          
             time_old = time;
 
             gl.enable(gl.DEPTH_TEST);
