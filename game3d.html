@@ -4,7 +4,7 @@
       <canvas width = "570" height = "570" id = "my_Canvas"></canvas>
 
       <script>
-Array.prototype.contains=(item)=>{for(var i=0;i<this.length;i++){if(this[i]===item)return true;}return false;}
+
 var pXCell=0;
 var pZCell=0;
 function crossProduct(a,b){
@@ -132,6 +132,7 @@ class mazeMesh{ //square
             } else{
                continue;
             }
+      
 
             var worldOffset= new vec3((j-floor(size/2))*subunitScale*2,0,(floor(size/2)-i)*subunitScale*2);
 
@@ -150,6 +151,15 @@ class mazeMesh{ //square
 
          }
       }
+
+      //1,0.5,0.5
+   
+      this.quads.push(new quad3(new vec3(-subunitScale*size,0,subunitScale*size),new vec3(subunitScale*size,0,subunitScale*size),new vec3(subunitScale*size,0,-subunitScale*size),new vec3(-subunitScale*size,0,-subunitScale*size),new vec3(1,0.5,0.5)));
+
+           //1,0.,0.5 
+           this.quads.push(new quad3(new vec3(-subunitScale*size,height,subunitScale*size),new vec3(subunitScale*size,height,subunitScale*size),new vec3(subunitScale*size,height,-subunitScale*size),new vec3(-subunitScale*size,height,-subunitScale*size),new vec3(1,0,0.5 )));
+
+
    }
    addSelfToWorld(w){
       this.quads.forEach((q)=>w.addQuad(q))
@@ -256,7 +266,7 @@ class world{
 
          material.uniforms.forEach((uniform)=>{
             
-               if(!this.uniformsUsed.contains(uniform.name)){
+               if(!this.uniformsUsed.includes(uniform.name)){
                   this.uniformSource+=`\nuniform ${uniform.type} ${uniform.name};\n`;
                   this.uniformsUsed.push(uniform.name)
                }
@@ -418,8 +428,27 @@ function loadGame(){
    `;
 
    var material=new material3(materialSource,new vec3(1,0,1),[{type:'float',name:'drawDistance'}]);
-   
+   var materialSource2=`
+   float tiling=2.;
+   float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
+   float lightVal=(1.-length(worldPos-playerVec)/drawDistance);
+   finalColor=squareVal*lightVal*vec3(1.,0.75,0.5);
+   `;
+
+   var material2=new material3(materialSource2,new vec3(1,0,0.5),[{type:'float',name:'drawDistance'}]);
+   var materialSource3=`
+   float tiling=2.;
+   float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
+   float lightVal=(1.-length(worldPos-playerVec)/drawDistance);
+   finalColor=squareVal*lightVal*vec3(0.25,0.25,0.5);
+   `;
+
+   var myMaterial3=new material3(materialSource3,new vec3(1,0.5,0.5),[{type:'float',name:'drawDistance'}]);
+
+
    gameWorld.addMaterial(material);
+   gameWorld.addMaterial(material2);
+   gameWorld.addMaterial(myMaterial3);
    /*for(var i=-7;i<7;i++){
       for(var j=-7;j<7;j++){
          gameWorld.addQuad(new quad3(new vec3(i*2-1,0,j*2+1),new vec3(i*2+1,0,j*2+1),new vec3(i*2+1,0,j*2-1), new vec3(i*2-1,0,j*2-1),new vec3(1,0,1)));
