@@ -20,6 +20,7 @@ function transposed(m){
    }
    return result;
 }
+
 function multMat4sAsArrays(mat1,mat2){
    var result=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
    //assume row major for now
@@ -76,6 +77,66 @@ class material3{
       return `\nif(vColor.x==${this.colorAssignment.x.toFixed(4)}&&vColor.y==${this.colorAssignment.y.toFixed(4)}&&vColor.z==${this.colorAssignment.z.toFixed(4)}){${this.sourceCode}}\n`;
    }
 }
+class mazeMesh{ //square
+ 
+   subunitScale=5;
+   quads=[]
+   height=5;
+   constructor(size,maze,subunitScale,height){ //maze: row major, 1=open, 0=occupied
+      this.size=size;
+      this.maze=maze;
+   
+      if(typeof subunitScale==='number')
+       this.subunitScale=subunitScale;
+       if(typeof height==='number')
+       this.height=height;
+   }
+   queryMaze(i,j,di,dj){
+      var size=this.size;
+      if(typeof di!=='number')
+      di=0;
+      if(typeof dj!=='number')
+      dj=0;
+
+      if(i+di>size-1||i+di<0)
+      return 0;
+      if(j+dj>size-1||j+dj<0)
+      return 0;
+
+      return this.maze[(i+di)*size+(j+dj)];
+   }
+   build(){
+      var size=this.size;
+      var subunitScale=this.subunitScale;
+      var floor = Math.floor;
+      var height=this.height;
+     
+      for(var i=0;i<size;i++){
+         for(var j=0;j<size;j++){
+            if(this.queryMaze(i,j)==0)
+            continue;
+            var worldOffset= new vec3((j-floor(size/2))*subunitScale*2,0,(floor(size/2)-i)*subunitScale*2);
+
+            if(this.queryMaze(i,j,-1,0)==0)
+            this.quads.push(new quad3(new vec3(-subunitScale,height,subunitScale).translate(worldOffset),new vec3(subunitScale,height,subunitScale).translate(worldOffset),new vec3(subunitScale,0,subunitScale).translate(worldOffset),new vec3(-subunitScale,0,subunitScale).translate(worldOffset),new vec3(1,0,1)));
+            
+            if(this.queryMaze(i,j,1,0)==0)
+            this.quads.push(new quad3(new vec3(-subunitScale,height,-subunitScale).translate(worldOffset),new vec3(subunitScale,height,-subunitScale).translate(worldOffset),new vec3(subunitScale,0,-subunitScale).translate(worldOffset),new vec3(-subunitScale,0,-subunitScale).translate(worldOffset),new vec3(1,0,1)));
+            
+            if(this.queryMaze(i,j,0,1)==0)
+            this.quads.push(new quad3(new vec3(subunitScale,height,-subunitScale).translate(worldOffset),new vec3(subunitScale,height,subunitScale).translate(worldOffset),new vec3(subunitScale,0,subunitScale).translate(worldOffset),new vec3(subunitScale,0,-subunitScale).translate(worldOffset),new vec3(1,0,1)));
+            
+            if(this.queryMaze(i,j,0,-1)==0)
+            this.quads.push(new quad3(new vec3(-subunitScale,height,-subunitScale).translate(worldOffset),new vec3(-subunitScale,height,subunitScale).translate(worldOffset),new vec3(-subunitScale,0,subunitScale).translate(worldOffset),new vec3(-subunitScale,0,-subunitScale).translate(worldOffset),new vec3(1,0,1)));
+            
+
+         }
+      }
+   }
+   addSelfToWorld(w){
+      this.quads.forEach((q)=>w.addQuad(q))
+   }
+}
 class world{
    fragCode =``;
    
@@ -86,6 +147,16 @@ class world{
    colors=[]
    indices=[]
    materials=[]
+   clear(){
+      while(this.vertices.length>0)
+         this.vertices.pop();
+      while(this.colors.length>0)
+         this.colors.pop();
+      while(this.indices.length>0)
+         this.indices.pop();
+      this.fragCode=``;
+      this.materialSource='';
+   }
    addQuad(quad){
       this.quads.push(quad);
    }
@@ -275,13 +346,16 @@ function loadGame(){
    `;
    var material=new material3(materialSource,new vec3(1,0,1));
    gameWorld.addMaterial(material);
-   for(var i=-7;i<7;i++){
+   /*for(var i=-7;i<7;i++){
       for(var j=-7;j<7;j++){
          gameWorld.addQuad(new quad3(new vec3(i*2-1,0,j*2+1),new vec3(i*2+1,0,j*2+1),new vec3(i*2+1,0,j*2-1), new vec3(i*2-1,0,j*2-1),new vec3(1,0,1)));
       }
    }
    gameWorld.addQuad(new quad3(new vec3(0,3,-5),new vec3(0,3,5),new vec3(0,0,5),new vec3(0,0,-5),new vec3(1,0,1)));
-   gameWorld.addQuad(new quad3(new vec3(-5,3,0),new vec3(5,3,0),new vec3(5,0,0),new vec3(-5,0,0),new vec3(1,0,1)));
+   gameWorld.addQuad(new quad3(new vec3(-5,3,0),new vec3(5,3,0),new vec3(5,0,0),new vec3(-5,0,0),new vec3(1,0,1)));*/
+   var sector1=new mazeMesh(3,[0,0,0,1,1,1,0,0,0]);
+   sector1.build();
+   sector1.addSelfToWorld(gameWorld);
    gameWorld.build();
    document.getElementsByTagName("body")[0].innerHtml="done loading.";
 }
