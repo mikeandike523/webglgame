@@ -4,7 +4,9 @@
       <canvas width = "570" height = "570" id = "my_Canvas"></canvas>
 
       <script>
-        
+Array.prototype.contains=(item)=>{for(var i=0;i<this.length;i++){if(this[i]===item)return true;}return false;}
+var pXCell=0;
+var pZCell=0;
 function crossProduct(a,b){
     return new vec3(a.y*b.z-a.z*b.y,a.z*b.x-a.x*b.z,a.x*b.y-a.y*b.x);
 }
@@ -68,14 +70,19 @@ window.addEventListener('keyup', onKeyUp);
 
 class material3{
    sourceCode="\nfinalColor=vec3(0,0,0);\n";
-
-   constructor(sourceCode,colorAssignment){
+   uniforms=[]
+   constructor(sourceCode,colorAssignment,uniforms){
       this.sourceCode=sourceCode;
       this.colorAssignment=colorAssignment;
+      if(uniforms!==undefined){
+         this.uniforms=uniforms;
+      }
    }
    getFullSource(){
-      return `\nif(vColor.x==${this.colorAssignment.x.toFixed(4)}&&vColor.y==${this.colorAssignment.y.toFixed(4)}&&vColor.z==${this.colorAssignment.z.toFixed(4)}){${this.sourceCode}}\n`;
+     
+      return `if(vColor.x==${this.colorAssignment.x.toFixed(4)}&&vColor.y==${this.colorAssignment.y.toFixed(4)}&&vColor.z==${this.colorAssignment.z.toFixed(4)}){${this.sourceCode}}\n`;
    }
+
 }
 class mazeMesh{ //square
  
@@ -110,11 +117,23 @@ class mazeMesh{ //square
       var subunitScale=this.subunitScale;
       var floor = Math.floor;
       var height=this.height;
-     
+     while(this.quads.length>0)
+     this.quads.pop();
+
       for(var i=0;i<size;i++){
          for(var j=0;j<size;j++){
             if(this.queryMaze(i,j)==0)
             continue;
+
+            var worldXCell = j-floor(size/2.0);
+            console.log(worldXCell)
+            var worldZCell = floor(size/2.0)-i;
+            if(Math.abs(worldZCell-pXCell)<=1&&Math.abs(worldXCell-pZCell)<=1){
+
+            } else{
+               continue;
+            }
+
             var worldOffset= new vec3((j-floor(size/2))*subunitScale*2,0,(floor(size/2)-i)*subunitScale*2);
 
             if(this.queryMaze(i,j,-1,0)==0)
@@ -139,7 +158,8 @@ class mazeMesh{ //square
 }
 class world{
    fragCode =``;
-   
+   uniformSource=''
+   uniformsUsed = []
    materialSource=""
    vertOrder = [0,1,2,2,3,0]
    quads=[]
@@ -147,6 +167,33 @@ class world{
    colors=[]
    indices=[]
    materials=[]
+   reloadGeometry(gl,vertex_buffer,color_buffer,index_buffer){
+        
+         this.buildGeometry();
+     
+         gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
+         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertices), gl.STATIC_DRAW);
+
+         // Create and store data into color buffer
+   
+         gl.bindBuffer(gl.ARRAY_BUFFER, color_buffer);
+         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.colors), gl.STATIC_DRAW);
+
+         // Create and store data into index buffer
+     
+         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
+         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.indices), gl.STATIC_DRAW);
+   }
+   clearGeometry(){
+      while(this.vertices.length>0)
+         this.vertices.pop();
+      while(this.colors.length>0)
+         this.colors.pop();
+      while(this.indices.length>0)
+         this.indices.pop();
+      while(this.quads.length>0)
+         this.quads.pop();
+   }
    clear(){
       while(this.vertices.length>0)
          this.vertices.pop();
@@ -154,8 +201,13 @@ class world{
          this.colors.pop();
       while(this.indices.length>0)
          this.indices.pop();
+      while(this.uniformsUsed.length>0)
+         this.uniformsUsed.pop();
+      while(this.quads.length>0)
+         this.quads.pop();
       this.fragCode=``;
       this.materialSource='';
+      this.uniformSource='';
    }
    addQuad(quad){
       this.quads.push(quad);
@@ -163,17 +215,7 @@ class world{
    addMaterial(material){
       this.materials.push(material)
    }
-   build(){
-      while(this.vertices.length>0)
-         this.vertices.pop();
-      while(this.colors.length>0)
-         this.colors.pop();
-      while(this.indices.length>0)
-         this.indices.pop();
-      this.fragCode=``;
-      this.materialSource='';
-      this.materials.forEach((material)=>{this.materialSource+=material.getFullSource()})
-
+   buildGeometry(){
       for(var i =0;i<this.quads.length;i++){
          var quad = this.quads[i];
          
@@ -197,11 +239,41 @@ class world{
       for(var i=0;i<this.quads.length;i++){
          this.vertOrder.forEach((subIndex)=>this.indices.push(i*4+subIndex))
       }
+   }
+   build(){
+      while(this.vertices.length>0)
+         this.vertices.pop();
+      while(this.colors.length>0)
+         this.colors.pop();
+      while(this.indices.length>0)
+         this.indices.pop();
+         while(this.uniformsUsed.length>0)
+         this.uniformsUsed.pop();
+      this.fragCode=``;
+      this.materialSource='';
+      this.uniformSource='';
+      var uniformString = '';
+      this.materials.forEach((material)=>{
+
+         material.uniforms.forEach((uniform)=>{
+            
+               if(!this.uniformsUsed.contains(uniform.name)){
+                  this.uniformSource+=`\nuniform ${uniform.type} ${uniform.name};\n`;
+                  this.uniformsUsed.push(uniform.name)
+               }
+         })
+
+      })
+      
+      this.materials.forEach((material)=>{this.materialSource+=material.getFullSource()})
+
+  this.buildGeometry()
       this.fragCode= `precision mediump float;
             varying vec3 vColor;
             varying vec3 worldPos;
             uniform vec3 playerVec;
             uniform float gameTime;
+            ${this.uniformSource}
             void main(void) {
                vec3 finalColor=vColor;
 ${this.materialSource}
@@ -337,14 +409,22 @@ class vec3{
     }
 }
 gameWorld = new world();
+var sector1;
 function loadGame(){
-   var materialSource=`
+ /*  var materialSource=`
    float tiling=2.;
    float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
-   float lightVal=(1.-length(worldPos-playerVec)/18.);
+   float lightVal=(1.-length(worldPos-playerVec)/drawDistance);
    finalColor=squareVal*lightVal*vec3(1.,1.,1.);
+   `;*/
+      var materialSource=`
+   float tiling=2.;
+   float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
+   float lightVal=(1.-length(worldPos-playerVec)/drawDistance);
+   finalColor=squareVal*vec3(1.,1.,1.);
    `;
-   var material=new material3(materialSource,new vec3(1,0,1));
+   var material=new material3(materialSource,new vec3(1,0,1),[{type:'float',name:'drawDistance'}]);
+   
    gameWorld.addMaterial(material);
    /*for(var i=-7;i<7;i++){
       for(var j=-7;j<7;j++){
@@ -353,7 +433,7 @@ function loadGame(){
    }
    gameWorld.addQuad(new quad3(new vec3(0,3,-5),new vec3(0,3,5),new vec3(0,0,5),new vec3(0,0,-5),new vec3(1,0,1)));
    gameWorld.addQuad(new quad3(new vec3(-5,3,0),new vec3(5,3,0),new vec3(5,0,0),new vec3(-5,0,0),new vec3(1,0,1)));*/
-   var sector1=new mazeMesh(5,[0,0,1,1,1,0,0,1,0,1,1,1,1,1,1,1,0,0,0,1,1,1,0,1,1]);
+   sector1=new mazeMesh(5,[0,0,1,1,1,0,0,1,0,1,1,1,1,1,1,1,0,0,0,1,1,1,0,1,1]);
    sector1.build();
    sector1.addSelfToWorld(gameWorld);
    gameWorld.build();
@@ -469,8 +549,15 @@ if (message.length > 0) {
          var Pmatrix = gl.getUniformLocation(shaderProgram, "Pmatrix");
          var Vmatrix = gl.getUniformLocation(shaderProgram, "Vmatrix");
          var Mmatrix = gl.getUniformLocation(shaderProgram, "Mmatrix");
-         var pVec=gl.getUniformLocation(shaderProgram, "playerVec");
          var gameTime=gl.getUniformLocation(shaderProgram, "gameTime");
+         console.log(Mmatrix)
+         console.log(gameTime)
+         var pVec=gl.getUniformLocation(shaderProgram, "playerVec");
+       
+         console.log(pVec)
+         var dD=gl.getUniformLocation(shaderProgram,'drawDistance');
+         console.log(dD);
+         
 
          gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
          var position = gl.getAttribLocation(shaderProgram, "position");
@@ -504,6 +591,17 @@ if (message.length > 0) {
          var playerAngle=0;
          var playerPitch=0;
          var playerVec = new vec3(0,2,0);
+         
+         function cellChanged(newpXCell,newpZCell){
+         console.log(newpXCell+"|"+newpZCell)
+         pXCell=newpXCell;
+           pZCell=newpZCell;
+            sector1.build();
+            gameWorld.clearGeometry();
+            sector1.addSelfToWorld(gameWorld);
+            gameWorld.reloadGeometry(gl,vertex_buffer,color_buffer,index_buffer);
+           
+         }
          var view_matrix = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
 
          // translating z
@@ -563,6 +661,11 @@ if (message.length > 0) {
          var time_old = 0;
 
          var animate = function(time) {
+            var newpXcell = Math.floor((playerVec.x+5)/10.0);
+            var newpZcell = Math.floor((playerVec.z+5)/10.0);
+            if(newpXcell!=pXCell||newpZcell!=pZCell){
+               cellChanged(newpXcell,newpZcell);
+            }
             view_matrix = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
             mov_matrix = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
             var dt = time-time_old;
@@ -606,7 +709,7 @@ if (message.length > 0) {
 
             gl.enable(gl.DEPTH_TEST);
             gl.depthFunc(gl.LEQUAL);
-            gl.clearColor(0.5, 0.5, 0.5, 0.9);
+            gl.clearColor(0,0,0,1);
             gl.clearDepth(1.0);
 
             gl.viewport(0.0, 0.0, canvas.width, canvas.height);
@@ -616,9 +719,10 @@ if (message.length > 0) {
             gl.uniformMatrix4fv(Mmatrix, false, mov_matrix);
             gl.uniform3fv(pVec,playerVec.toArray());
             gl.uniform1f(gameTime,time);
+            gl.uniform1f(dD,30);
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
             gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
-
+           
             window.requestAnimationFrame(animate);
          }
          animate(0);
