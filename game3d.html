@@ -64,14 +64,32 @@ function isKeyDown(key)
 window.addEventListener('keydown', onKeyDown);
 window.addEventListener('keyup', onKeyUp);
 
+class material3{
+   sourceCode="\nfinalColor=vec3(0,0,0);\n";
+
+   constructor(sourceCode,colorAssignment){
+      this.sourceCode=sourceCode;
+      this.colorAssignment=colorAssignment;
+   }
+   getFullSource(){
+      return `\nif(vColor.x==${this.colorAssignment.x.toFixed(4)}&&vColor.y==${this.colorAssignment.y.toFixed(4)}&&vColor.z==${this.colorAssignment.z.toFixed(4)}){${this.sourceCode}}\n`;
+   }
+}
 class world{
+   fragCode =``;
+   
+   materialSource=""
    vertOrder = [0,1,2,2,3,0]
    quads=[]
    vertices=[]
    colors=[]
    indices=[]
+   materials=[]
    addQuad(quad){
       this.quads.push(quad);
+   }
+   addMaterial(material){
+      this.materials.push(material)
    }
    build(){
       while(this.vertices.length>0)
@@ -80,6 +98,9 @@ class world{
          this.colors.pop();
       while(this.indices.length>0)
          this.indices.pop();
+      this.fragCode=``;
+      this.materialSource='';
+      this.materials.forEach((material)=>{this.materialSource+=material.getFullSource()})
 
       for(var i =0;i<this.quads.length;i++){
          var quad = this.quads[i];
@@ -104,7 +125,16 @@ class world{
       for(var i=0;i<this.quads.length;i++){
          this.vertOrder.forEach((subIndex)=>this.indices.push(i*4+subIndex))
       }
-      console.log(this.indices)
+      this.fragCode= `precision mediump float;
+            varying vec3 vColor;
+            varying vec3 worldPos;
+            uniform vec3 playerVec;
+            uniform float gameTime;
+            void main(void) {
+               vec3 finalColor=vColor;
+${this.materialSource}
+               gl_FragColor = vec4(finalColor, 1.);
+            }`;
       
    }
    getVertices(){
@@ -115,6 +145,9 @@ class world{
    }
    getIndices(){
       return this.indices;
+   }
+   getFragCode(){
+      return this.fragCode;
    }
 
 }
@@ -209,15 +242,44 @@ class vec3{
        this.z*=v.z;
        return this;
     }
+    toArray(){
+       return [this.x,this.y,this.z];
+    }
+    
+    swizzle(seq){
+      var coords = [];
+      for(var i=0;i<3;i++){
+         switch(seq[i]){
+            case 'x': coords.push(this.x); break;
+            case 'y': coords.push(this.y); break;
+            case 'z': coords.push(this.z); break;
+         }
+      }
+      return new vec3().fromArray(coords);
+    }
+    fromArray(coords){
+       this.x=coords[0];
+       this.y=coords[1];
+       this.z=coords[2];
+       return this;
+    }
 }
 gameWorld = new world();
 function loadGame(){
+   var materialSource=`
+   float tiling=2.;
+   float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
+   float lightVal=(1.-length(worldPos-playerVec)/18.);
+   finalColor=squareVal*lightVal*vec3(1.,1.,1.);
+   `;
+   var material=new material3(materialSource,new vec3(1,0,1));
+   gameWorld.addMaterial(material);
    for(var i=-7;i<7;i++){
       for(var j=-7;j<7;j++){
-         gameWorld.addQuad(new quad3(new vec3(i*2-1,0,j*2+1),new vec3(i*2+1,0,j*2+1),new vec3(i*2+1,0,j*2-1), new vec3(i*2-1,0,j*2-1),new vec3(Math.random(),(i>0&&j>0)?1:0,Math.random()/2+0.5)));
+         gameWorld.addQuad(new quad3(new vec3(i*2-1,0,j*2+1),new vec3(i*2+1,0,j*2+1),new vec3(i*2+1,0,j*2-1), new vec3(i*2-1,0,j*2-1),new vec3(1,0,1)));
       }
    }
-   gameWorld.addQuad(new quad3(new vec3(0,3,-5),new vec3(0,3,5),new vec3(0,0,5),new vec3(0,0,-5),new vec3(1,1,0)));
+   gameWorld.addQuad(new quad3(new vec3(0,3,-5),new vec3(0,3,5),new vec3(0,0,5),new vec3(0,0,-5),new vec3(1,0,1)));
    gameWorld.addQuad(new quad3(new vec3(-5,3,0),new vec3(5,3,0),new vec3(5,0,0),new vec3(-5,0,0),new vec3(1,0,1)));
    gameWorld.build();
    document.getElementsByTagName("body")[0].innerHtml="done loading.";
@@ -279,25 +341,28 @@ var vertCode = `attribute vec3 position;
             uniform mat4 Pmatrix;
             uniform mat4 Vmatrix;
             uniform mat4 Mmatrix;
+          
             attribute vec3 color;
             varying vec3 vColor;
             varying vec3 worldPos;
 
             void main(void) { 
                gl_Position = Pmatrix*Vmatrix*Mmatrix*vec4(position, 1.);
-               worldPos=(Mmatrix*vec4(position, 1.)).xyz;
+               worldPos=(Mmatrix*vec4(position, 1.)).zyx;
                vColor = color;
             }`;
 
-         var fragCode = `precision mediump float;
+        /* var fragCode = `precision mediump float;
             varying vec3 vColor;
             varying vec3 worldPos;
             
             void main(void) {
                float sF= worldPos.x<0.&&worldPos.z<0.?(1.-length(worldPos)/(12.)):1.;
                gl_FragColor = vec4(sF*vColor, 1.);
-            }`;
-
+            }`;*/
+            var fragCode=gameWorld.getFragCode();
+            console.log(fragCode)
+            console.log(fragCode)
 
          var vertShader = gl.createShader(gl.VERTEX_SHADER);
          gl.shaderSource(vertShader, vertCode);
@@ -329,6 +394,8 @@ if (message.length > 0) {
          var Pmatrix = gl.getUniformLocation(shaderProgram, "Pmatrix");
          var Vmatrix = gl.getUniformLocation(shaderProgram, "Vmatrix");
          var Mmatrix = gl.getUniformLocation(shaderProgram, "Mmatrix");
+         var pVec=gl.getUniformLocation(shaderProgram, "playerVec");
+         var gameTime=gl.getUniformLocation(shaderProgram, "gameTime");
 
          gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
          var position = gl.getAttribLocation(shaderProgram, "position");
@@ -359,9 +426,9 @@ if (message.length > 0) {
          var proj_matrix = get_projection(40, canvas.width/canvas.height, 1, 100);
 
          var mov_matrix = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
-         var playerAngle=5*Math.PI/4;
+         var playerAngle=0;
          var playerPitch=0;
-         var playerVec = new vec3(7,2,7);
+         var playerVec = new vec3(0,2,0);
          var view_matrix = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
 
          // translating z
@@ -472,6 +539,8 @@ if (message.length > 0) {
             gl.uniformMatrix4fv(Pmatrix, false, proj_matrix);
             gl.uniformMatrix4fv(Vmatrix, false, view_matrix);
             gl.uniformMatrix4fv(Mmatrix, false, mov_matrix);
+            gl.uniform3fv(pVec,playerVec.toArray());
+            gl.uniform1f(gameTime,time);
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
             gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
 
