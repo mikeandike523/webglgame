@@ -86,12 +86,13 @@ class material3{
 class mazeMesh{ //square
  
    subunitScale=5;
+   lightsData=[];
    quads=[]
    height=5;
    constructor(size,maze,subunitScale,height){ //maze: row major, 1=open, 0=occupied
       this.size=size;
       this.maze=maze;
-   
+     
       if(typeof subunitScale==='number')
        this.subunitScale=subunitScale;
        if(typeof height==='number')
@@ -118,25 +119,26 @@ class mazeMesh{ //square
       var height=this.height;
      while(this.quads.length>0)
      this.quads.pop();
-
+     while(this.lightsData.length>0)
+     this.lightsData.pop();
       for(var i=0;i<size;i++){
          for(var j=0;j<size;j++){
+            
+
+           
             if(this.queryMaze(i,j)==0)
             continue;
+            var worldOffset= new vec3((j-floor(size/2))*subunitScale*2,0,(floor(size/2)-i)*subunitScale*2);
+           
+            
+           
 
             var worldXCell = j-floor(size/2.0);
          
             var worldZCell = floor(size/2.0)-i;
+        
             if(Math.abs(worldZCell-pXCell)<=3&&Math.abs(worldXCell-pZCell)<=3){
-
-            } else{
-               continue;
-            }
-      
-
-            var worldOffset= new vec3((j-floor(size/2))*subunitScale*2,0,(floor(size/2)-i)*subunitScale*2);
-
-            if(this.queryMaze(i,j,-1,0)==0)
+               if(this.queryMaze(i,j,-1,0)==0)
             this.quads.push(new quad3(new vec3(-subunitScale,height,subunitScale).translate(worldOffset),new vec3(subunitScale,height,subunitScale).translate(worldOffset),new vec3(subunitScale,0,subunitScale).translate(worldOffset),new vec3(-subunitScale,0,subunitScale).translate(worldOffset),new vec3(1,0,1)));
             
             if(this.queryMaze(i,j,1,0)==0)
@@ -154,17 +156,29 @@ class mazeMesh{ //square
 //1,0.,0.5 
 this.quads.push(new quad3(new vec3(-subunitScale,height,subunitScale).translate(worldOffset),new vec3(subunitScale,height,subunitScale).translate(worldOffset),new vec3(subunitScale,height,-subunitScale).translate(worldOffset),new vec3(-subunitScale,height,-subunitScale).translate(worldOffset),new vec3(1,0,0.5 )));
 
+               this.lightsData.push(...new vec3(0,2.5,0).translate(worldOffset).toArray());
+            } else if(Math.abs(worldZCell-pXCell)<=7&&Math.abs(worldXCell-pZCell)<=7){
+               this.lightsData.push(...new vec3(0,2.5,0).translate(worldOffset).toArray());
+            }
+      
+
+          
+ 
 
 
          }
       }
 
       //1,0.5,0.5
-   
+      
    
    }
    addSelfToWorld(w){
       this.quads.forEach((q)=>w.addQuad(q))
+   }
+   lightSelf(lightsLocation,numLightsLocation){
+      gl.uniform3fv(lightsLocation,new Float32Array(this.lightsData));
+      gl.uniform1i(numLightsLocation,Math.floor(this.lightsData.length/3.));
    }
 }
 class world{
@@ -422,30 +436,28 @@ class vec3{
 gameWorld = new world();
 var sector1;
 function loadGame(){
+
+   //for now, use a hardcoded subunit of 5
    var materialSource=`
+   float lightScale=0.;
+   for(int i=0;i<49;i++){
+      if(i<numLights){
+      vec3 lightPos = lights[i];
+      lightScale=lightScale+2.*clamp(1.-length(worldPos-lightPos.zyx)/6.5,0.,1.);
+      }
+   }
    float tiling=2.;
    float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
-   float lightVal=(1.-length(worldPos-playerVec)/drawDistance);
-   finalColor=squareVal*lightVal*vec3(1.,1.,1.);
+   float lightVal=1.-length(worldPos-playerVec)/drawDistance;
+   finalColor=squareVal*lightVal*vec3(1.,1.,1.)+lightScale*vec3(1.,0.,0.)*lightVal;
    `;
 
-   var material=new material3(materialSource,new vec3(1,0,1),[{type:'float',name:'drawDistance'}]);
-   var materialSource2=`
-   float tiling=2.;
-   float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
-   float lightVal=(1.-length(worldPos-playerVec)/drawDistance);
-   finalColor=squareVal*lightVal*vec3(1.,0.75,0.5);
-   `;
 
-   var material2=new material3(materialSource2,new vec3(1,0,0.5),[{type:'float',name:'drawDistance'}]);
-   var materialSource3=`
-   float tiling=2.;
-   float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
-   float lightVal=(1.-length(worldPos-playerVec)/drawDistance);
-   finalColor=squareVal*lightVal*vec3(0.25,0.25,0.5);
-   `;
+   var material=new material3(materialSource,new vec3(1,0,1),[{type:'float',name:'drawDistance'},{type:"vec3",name:'lights[49]'},{type:'int',name:'numLights'}]);
 
-   var myMaterial3=new material3(materialSource3,new vec3(1,0.5,0.5),[{type:'float',name:'drawDistance'}]);
+   var material2=new material3(materialSource,new vec3(1,0,0.5),[{type:'float',name:'drawDistance'},{type:"vec3",name:'lights[49]'},{type:'int',name:'numLights'}]);
+  
+   var myMaterial3=new material3(materialSource,new vec3(1,0.5,0.5),[{type:'float',name:'drawDistance'},{type:"vec3",name:'lights[49]'},{type:'int',name:'numLights'}]);
 
 
    gameWorld.addMaterial(material);
@@ -590,7 +602,11 @@ if (message.length > 0) {
        
      
          var dD=gl.getUniformLocation(shaderProgram,'drawDistance');
-      
+         var lights=gl.getUniformLocation(shaderProgram,'lights');
+         var numLights=gl.getUniformLocation(shaderProgram,'numLights');
+
+         console.log(lights)
+         
          
 
          gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
@@ -606,6 +622,7 @@ if (message.length > 0) {
          // Color
          gl.enableVertexAttribArray(color);
          gl.useProgram(shaderProgram);
+         sector1.lightSelf(lights,numLights);
 
          /*==================== MATRIX =====================*/
 
@@ -634,7 +651,7 @@ if (message.length > 0) {
             gameWorld.clearGeometry();
             sector1.addSelfToWorld(gameWorld);
             gameWorld.reloadGeometry(gl,vertex_buffer,color_buffer,index_buffer);
-           
+            sector1.lightSelf(lights,numLights);
          }
          var view_matrix = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
 
