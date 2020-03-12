@@ -742,6 +742,20 @@ if (message.length > 0) {
             if(playerPitch<-Math.PI/6)
             playerPitch=-Math.PI/6
 
+            if(!(isKeyDown(Keys.down)||isKeyDown(Keys.up))){
+                 
+               if(playerPitch>Math.PI/40){
+               playerPitch-=dt*0.006;
+               if(playerPitch<0)
+               playerPitch=0;}
+               else if(playerPitch<-Math.PI/40){
+               playerPitch+=dt*0.006;
+               if(playerPitch>0)
+               playerPitch=0}
+               else
+               playerPitch=0;
+            }
+
             if(isKeyDown(Keys.w))
             playerVec.translate(new vec3(dt*0.01*Math.cos(playerAngle),0,dt*0.01*Math.sin(playerAngle)))
             if(isKeyDown(Keys.a))
