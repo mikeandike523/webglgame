@@ -177,6 +177,7 @@ class mazeMesh{ //square
       this.quads.forEach((q)=>w.addQuad(q))
    }
    lightSelf(lightsLocation,numLightsLocation){
+      
       gl.uniform3fv(lightsLocation,new Float32Array(this.lightsData));
       gl.uniform1i(numLightsLocation,Math.floor(this.lightsData.length/3.));
    }
@@ -851,15 +852,20 @@ if (message.length > 0) {
                const attachmentPoint = gl.COLOR_ATTACHMENT0;
                const level=0;
                gl.framebufferTexture2D(gl.FRAMEBUFFER, attachmentPoint, gl.TEXTURE_2D, this.targetTexture, level);
+               if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+                  throw "framebuffer is not complete";
+               }
+
+               
                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-
+              
 
 
  
             }
 
             bindSelf(unshaded){
+               
                gl.uniform1i(unshaded,1);
                gl.bindFramebuffer(gl.FRAMEBUFFER,this.fb);  
             
@@ -937,52 +943,38 @@ if (message.length > 0) {
             time_old = time;
 
 
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
+          
           
             shadowedLight1.setPosition(playerVec)
             shadowedLight1.setYaw(playerAngle)
             shadowedLight1.setPitch(playerPitch)
-            //gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
-            
-          
-           // gl.uniform1i(unshaded,1);
-        
+       
+        let primary_draw=(isShaded)=>{
+            gl.useProgram(shaderProgram);
             gl.bindTexture(gl.TEXTURE_2D, shadowedLight1.targetTexture);
             gl.enable(gl.DEPTH_TEST);
             gl.depthFunc(gl.LEQUAL);
             gl.clearColor(0,0,0,1);
             gl.clearDepth(1.0);
-
-           
-           
-           
             gl.uniformMatrix4fv(Pmatrix, false, proj_matrix);
             gl.uniformMatrix4fv(Vmatrix, false, view_matrix);
             gl.uniformMatrix4fv(Mmatrix, false, mov_matrix);
             gl.uniform3fv(pVec,playerVec.toArray());
             gl.uniform1f(gameTime,time);
             gl.uniform1f(dD,30);
+            gl.uniform1i(unshaded,isShaded);
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
-          
-
-           
             gl.viewport(0.0, 0.0, canvas.width, canvas.height);
             gl.bindTexture(gl.TEXTURE_2D, shadowedLight1.targetTexture);
-
-
-
-
-
-            shadowedLight1.bindSelf(unshaded);
-            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-            gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
-            shadowedLight1.freeSelf(unshaded);
-
-
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
 
-
+        }
+        
+       shadowedLight1.bindSelf(unshaded);
+        primary_draw(1);
+       shadowedLight1.freeSelf(unshaded);
+        primary_draw(0);
 
 
             window.requestAnimationFrame(animate);
