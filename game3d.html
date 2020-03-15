@@ -608,6 +608,37 @@ if (message.length > 0) {
          gl.linkProgram(shaderProgram);
 
 
+
+   
+         var vertShader2 = gl.createShader(gl.VERTEX_SHADER);
+         gl.shaderSource(vertShader2, vertCode);
+         gl.compileShader(vertShader2);
+            console.log("vslog")
+var message = gl.getShaderInfoLog(vertShader2);
+
+if (message.length > 0) {
+  /* message may be an error or a warning */
+  throw message;
+}
+         var fragShader2 = gl.createShader(gl.FRAGMENT_SHADER);
+         gl.shaderSource(fragShader2, fragCode);
+         gl.compileShader(fragShader2);
+         console.log("fslog")
+         var message = gl.getShaderInfoLog(fragShader2);
+
+if (message.length > 0) {
+  /* message may be an error or a warning */
+  throw message;
+}
+
+
+
+var shaderProgram2 = gl.createProgram();
+         gl.attachShader(shaderProgram2, vertShader2);
+         gl.attachShader(shaderProgram2, fragShader2);
+         gl.linkProgram(shaderProgram2);
+
+
      
          gl.useProgram(shaderProgram);
 
@@ -793,32 +824,35 @@ if (message.length > 0) {
             setNumIndicies(numIndices){
                this.numIndices=numIndices;
             }
-            constructor(position,yaw,pitch,resolution,openingAngle,bias,shaderProgram,Pmatrix,Vmatrix,unshaded){
+            constructor(position,yaw,pitch,resolution,openingAngle,bias,theshaderProgram,locations){
                /*
                     uniform mat4 lightVMatrix;
                uniform mat4 lightPMatrix;
                */
                super(position,yaw,pitch);
+
                this.resolution=resolution;
                this.openingAngle=openingAngle;
-               this.shaderProgram=shaderProgram;
-               this.Pmatrix=Pmatrix;
-               this.Vmatrix=Vmatrix;
-               this.loc_unshaded=unshaded;
-              
-      
-               this.loc_lVM=gl.getUniformLocation(shaderProgram, "lightVMatrix");
-               this.loc_lPM=gl.getUniformLocation(shaderProgram, "lightPMatrix");
-            
-               this.loc_Mmatrix=gl.getUniformLocation(shaderProgram,'Mmatrix')
-             //  gl.uniformMatrix4fv(loc_Mmatrix, false, [1,0,0,0,
-              // 0,1,0,0,
-             //  0,0,1,0
-             //  ,0,0,0,1]);
+               this.shaderProgram=theshaderProgram;
+               this.unshaded=locations.unshaded;
+             
+               gl.useProgram(this.shaderProgram);
+               /*
+               this.Pmatrix=gl.getUniformLocation(this.shaderProgram, "PMatrix");
+               this.Vmatrix=gl.getUniformLocation(this.shaderProgram, "MMatrix");
+           
+               this.loc_lVM=gl.getUniformLocation(this.shaderProgram, "lightVMatrix");
+               this.loc_lPM=gl.getUniformLocation(this.shaderProgram, "lightPMatrix");
+               this.loc_unshaded=gl.getUniformLocation(this.shaderProgram, "unshaded");
+               this.loc_Mmatrix=gl.getUniformLocation(this.shaderProgram,'Mmatrix')
+              gl.uniformMatrix4fv(this.loc_Mmatrix, false, [1,0,0,0,
+              0,1,0,0,
+              0,0,1,0
+              ,0,0,0,1]);*/
                this.projectionMatrix=get_projection(this.openingAngle,1,1,100);
                this.shaderProgram=shaderProgram;
                this.bias=bias;
-               //gl.uniformMatrix4fv(this.loc_lPM, false, this.projectionMatrix);
+              // gl.uniformMatrix4fv(this.loc_lPM, false, this.projectionMatrix);
                
                this.fb = gl.createFramebuffer();
            
@@ -864,12 +898,12 @@ if (message.length > 0) {
             
          
             bufferSelf(){
-               gl.useProgram(this.shaderProgram)
+               gl.useProgram(this.shaderProgram);
                
-               this.viewMatrix=lookMatrix(this.position,this.yaw,this.pitch);
-               ////gl.uniformMatrix4fv(this.loc_lVM, false, this.viewMatrix);
-               //gl.uniformMatrix4fv(this.Pmatrix, false,this.projectionMatrix);
-             //gl.uniformMatrix4fv(this.Vmatrix, false, this.viewMatrix);
+              // this.viewMatrix=lookMatrix(this.position,this.yaw,this.pitch);
+            //gl.uniformMatrix4fv(this.loc_lVM, false, this.viewMatrix);
+             //  gl.uniformMatrix4fv(this.Pmatrix, false,this.projectionMatrix);
+            // gl.uniformMatrix4fv(this.Vmatrix, false, this.viewMatrix);
              gl.bindFramebuffer(gl.FRAMEBUFFER, null);
              gl.bindTexture(gl.TEXTURE_2D, this.targetTexture);
              
@@ -882,9 +916,9 @@ gl.viewport(0, 0, this.resolution, this.resolution);
 gl.clearColor(0, 0, 1, 1);   // clear to blue
 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-gl.uniform1i(this.loc_unshaded,1);
+gl.uniform1i(this.unshaded,1);
              gl.drawElements(gl.TRIANGLES, this.numIndices, gl.UNSIGNED_SHORT, 0);
-gl.uniform1i(this.loc_unshaded,0);
+gl.uniform1i(this.unshaded,0);
 
 
 
@@ -904,7 +938,7 @@ gl.uniform1i(this.loc_unshaded,0);
 
 
      
-         var shadowedLight1=new shadowedLight(playerVec,0,0,150,40,0.001,shaderProgram,Pmatrix,Vmatrix,unshaded)
+         var shadowedLight1=new shadowedLight(playerVec,0,0,150,40,0.001,shaderProgram2,{unshaded:unshaded})
          gameWorld.setShadowedLight(shadowedLight1);
          gameWorld.build();
   
@@ -975,6 +1009,7 @@ gl.uniform1i(this.loc_unshaded,0);
             shadowedLight1.setPitch(playerPitch)
             //gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
             shadowedLight1.bufferSelf();
+            gl.useProgram(shaderProgram);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             gl.bindTexture(gl.TEXTURE_2D, shadowedLight1.targetTexture);
             gl.enable(gl.DEPTH_TEST);
