@@ -946,7 +946,7 @@ gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             gl.clearColor(0,0,0,1);
             gl.clearDepth(1.0);
 
-            gl.viewport(0.0, 0.0, canvas.width, canvas.height);
+           
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             gl.uniformMatrix4fv(Pmatrix, false, proj_matrix);
             gl.uniformMatrix4fv(Vmatrix, false, view_matrix);
@@ -961,6 +961,7 @@ gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             shadowedLight1.setPitch(playerPitch)
 
             shadowedLight1.bufferSelf();
+            gl.viewport(0.0, 0.0, canvas.width, canvas.height);
             gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
            
             window.requestAnimationFrame(animate);
