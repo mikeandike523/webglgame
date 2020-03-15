@@ -296,10 +296,16 @@ class world{
       this.fragCode= `precision mediump float;
             varying vec3 vColor;
             varying vec3 worldPos;
+            varying vec4 shadowMapPos;
             uniform vec3 playerVec;
             uniform float gameTime;
+            uniform int unshaded;
+            uniform sampler2D shadowSampler;
             ${this.uniformSource}
             void main(void) {
+               if(unshaded==1)
+               {gl_FragColor=vec4(0.,0.,0.,1);
+               return;}
                vec3 finalColor=vColor;
 ${this.materialSource}
                gl_FragColor = vec4(finalColor, 1.);
@@ -432,6 +438,12 @@ class vec3{
        this.z=coords[2];
        return this;
     }
+    getVectorProjection(base){
+       var baseDirection=base.getDirection();
+       var comp=dotProduct(base,this)/base.getMagnitude();
+       return baseDirection().copy().scale(comp);
+    }
+   
 }
 gameWorld = new world();
 var sector1;
@@ -498,6 +510,7 @@ loadGame();
          /*============= Creating a canvas =================*/
          var canvas = document.getElementById('my_Canvas');
          gl = canvas.getContext('experimental-webgl');
+       
 
          /*============ Defining and storing the geometry =========*/
 
@@ -523,25 +536,9 @@ loadGame();
          gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
 
          /*=================== Shaders =========================*/
-         /*
-         var vertCode = 'attribute vec3 position;'+
-            'uniform mat4 Pmatrix;'+
-            'uniform mat4 Vmatrix;'+
-            'uniform mat4 Mmatrix;'+
-            'attribute vec3 color;'+//the color of the point
-            'varying vec3 vColor;'+
-
-            'void main(void) { '+//pre-built function
-               'gl_Position = Pmatrix*Vmatrix*Mmatrix*vec4(position, 1.);'+
-               'vColor = color;'+
-            '}';
-
-         var fragCode = 'precision mediump float;'+
-            'varying vec3 vColor;'+
-            'void main(void) {'+
-               'gl_FragColor = vec4(vColor, 1.);'+
-            '}';
-*/
+         
+   
+//
 var vertCode = `attribute vec3 position;
             uniform mat4 Pmatrix;
             uniform mat4 Vmatrix;
@@ -600,12 +597,20 @@ if (message.length > 0) {
          gl.attachShader(shaderProgram, fragShader);
          gl.linkProgram(shaderProgram);
 
+
+     
+
+
+
+
+
          /* ====== Associating attributes to vertex shader =====*/
          var Pmatrix = gl.getUniformLocation(shaderProgram, "Pmatrix");
          var Vmatrix = gl.getUniformLocation(shaderProgram, "Vmatrix");
          var Mmatrix = gl.getUniformLocation(shaderProgram, "Mmatrix");
          var gameTime=gl.getUniformLocation(shaderProgram, "gameTime");
-      
+         
+        
          var pVec=gl.getUniformLocation(shaderProgram, "playerVec");
        
      
@@ -653,7 +658,7 @@ if (message.length > 0) {
 
          var playerPitch=0; //pitch angle made with z axis (zy plane), positive is up
          var playerVec = new vec3(0,2,0);
-         
+    
       
 
          function cellChanged(newpXCell,newpZCell){
@@ -712,36 +717,169 @@ if (message.length > 0) {
             return look_matrix;
          }
 
-/*
-         function rotateX(m, angle) {
-            var c = Math.cos(angle);
-            var s = Math.sin(angle);
-            var mv1 = m[1], mv5 = m[5], mv9 = m[9];
+         var axisI = new vec3(1,0,0);
+         var axisJ = new vec3(0,1,0);
+         var axisK = new vec3(0,0,1);
+         function lookAtAngles(position1,position2){
+            //function to return two angles based of lookAt point to position
+            var delta = position2.getDifference(position1);
+            //first, assume right yaw
+            var yaw = new vec3(delta.x,0,delta.z).getAngle(axisK);
+            if(delta.x<0)
+               yaw=-yaw;
+            //first, assume up pitch
+            var pitch=new vec3(0,delta.y,delta.z).getAngle(axisK);
+            if(delta.y<0)
+            pitch=-pitch;
 
-            m[1] = m[1]*c-m[2]*s;
-            m[5] = m[5]*c-m[6]*s;
-            m[9] = m[9]*c-m[10]*s;
-
-            m[2] = m[2]*c+mv1*s;
-            m[6] = m[6]*c+mv5*s;
-            m[10] = m[10]*c+mv9*s;
+            return [yaw,pitch];
          }
 
-         function rotateY(m, angle) {
-            var c = Math.cos(angle);
-            var s = Math.sin(angle);
-            var mv0 = m[0], mv4 = m[4], mv8 = m[8];
-
-            m[0] = c*m[0]+s*m[2];
-            m[4] = c*m[4]+s*m[6];
-            m[8] = c*m[8]+s*m[10];
-
-            m[2] = c*m[2]-s*mv0;
-            m[6] = c*m[6]-s*mv4;
-            m[10] = c*m[10]-s*mv8;
+        
+         class actor{
+            //send in arguments as an object, can be initialized either with angles or with lookAt point
+            yaw=0;
+            pitch=0;
+            constructor(position,yaw,pitch){
+               this.position=position;
+               if(typeof yaw ==='number')
+                  this.yaw=yaw;
+               if(typeof pitch ==='number')
+                  this.pitch=pitch;
+            }
+            lookAt(lookAtPoint){
+               var angles=lookAtAngles(this.position,lookAtPoint);
+               this.yaw=angles[0];
+               this.pitch=angles[1];
+               return this;
+            }
+            setPosition(position){
+               this.position=position;
+               return this;
+            }
+            setYaw(yaw){
+               this.yaw=yaw;
+               return this;
+            }
+            setPitch(pitch){
+               this.pitch=pitch;
+               return this;
+            }
+            addYaw(dyaw){
+               this.yaw+=dyaw;
+               return this;
+            }
+            addPitch(dpitch){
+               this.pitch+=dpitch;
+               return this;
+            }
          }
-         */
 
+
+  
+
+         class shadowedLight extends actor{
+           
+            
+            constructor(position,yaw,pitch,resolution,openingAngle,bias,shaderProgram,Pmatrix,Vmatrix,numIndices){
+               /*
+                    uniform mat4 lightVMatrix;
+               uniform mat4 lightPMatrix;
+               */
+               super(position,yaw,pitch);
+               this.resolution=resolution;
+               this.openingAngle=openingAngle;
+               this.shaderProgram=shaderProgram;
+               this.loc_unshaded=gl.getUniformLocation(shaderProgram, "unshaded");
+               this.loc_viewmatrix=gl.getUniformLocation(shaderProgram, "unshaded");
+               this.loc_lVM=gl.getUniformLocation(shaderProgram, "lightVMatrix");
+               this.loc_lPM=gl.getUniformLocation(shaderProgram, "lightPMatrix");
+               this.projectionMatrix=get_projection(this.openingAngle,1,1,100);
+               this.shaderProgram=shaderProgram;
+               this.bias=bias;
+               gl.uniformMatrix4fv(this.loc_lPM, false, this.projectionMatrix);
+               
+               this.fb = gl.createFramebuffer();
+               this.numIndices=numIndices;
+
+
+                  //create render target
+                                 // Create a texture to render to
+                  const targetTextureWidth = resolution;
+                  const targetTextureHeight = resolution;
+                  this.targetTexture = gl.createTexture();
+                  gl.bindTexture(gl.TEXTURE_2D, this.targetTexture);
+
+                  {
+                     // define size and format of level 0
+                     const level = 0;
+                     const internalFormat = gl.RGBA;
+                     const border = 0;
+                     const format = gl.RGBA;
+                     const type = gl.UNSIGNED_BYTE;
+                     const data = null;
+                     gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+                                    targetTextureWidth, targetTextureHeight, border,
+                                    format, type, data);
+
+                     // set the filtering so we don't need mips
+                     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                  }
+
+                  gl.bindFramebuffer(gl.FRAMEBUFFER, this.fb);
+                  // attach the texture as the first color attachment
+                  const attachmentPoint = gl.COLOR_ATTACHMENT0;
+                  const level = 0;
+                  gl.framebufferTexture2D(gl.FRAMEBUFFER, attachmentPoint, gl.TEXTURE_2D, this.targetTexture, level);
+
+
+
+
+
+ 
+            }
+            
+         
+            bufferSelf(){
+               gl.uniform1i(this.loc_unshaded,1);
+               this.viewMatrix=lookMatrix(this.position,this.yaw,this.pitch);
+               gl.uniformMatrix4fv(this.loc_lVM, false, this.viewMatrix);
+               gl.uniformMatrix4fv(this.Pmatrix, false,this.projectionMatrix);
+             gl.uniformMatrix4fv(this.Vmatrix, false, this.viewMatrix);
+             gl.bindFramebuffer(gl.FRAMEBUFFER, this.fb);
+
+
+// Tell WebGL how to convert from clip space to pixels
+gl.viewport(0, 0, this.resolution, this.resolution);
+
+// Clear the attachment(s).
+gl.clearColor(0, 0, 1, 1);   // clear to blue
+gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+
+             gl.drawElements(gl.TRIANGLES, this.numIndices, gl.UNSIGNED_SHORT, 0);
+
+
+
+
+            
+
+
+
+
+             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+               gl.uniform1i(this.loc_unshaded,0);
+            }
+
+         }     
+
+
+     
+         var shadowedLight1=new shadowedLight(playerVec,0,0,150,40,0.001,shaderProgram,Pmatrix,Vmatrix,indices.length)
+    
+  
          /*================= Drawing ===========================*/
          var time_old = 0;
 
@@ -801,6 +939,8 @@ if (message.length > 0) {
           
             time_old = time;
 
+
+            
             gl.enable(gl.DEPTH_TEST);
             gl.depthFunc(gl.LEQUAL);
             gl.clearColor(0,0,0,1);
@@ -815,6 +955,12 @@ if (message.length > 0) {
             gl.uniform1f(gameTime,time);
             gl.uniform1f(dD,30);
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
+
+            shadowedLight1.setPosition(playerVec)
+            shadowedLight1.setYaw(playerAngle)
+            shadowedLight1.setPitch(playerPitch)
+
+            shadowedLight1.bufferSelf();
             gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
            
             window.requestAnimationFrame(animate);
