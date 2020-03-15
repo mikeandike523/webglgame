@@ -309,10 +309,10 @@ class world{
             uniform sampler2D shadowSampler;
             ${this.uniformSource}
             void main(void) {
-               if(true)
+               if(unshaded==1)
                {
-                  gl_FragColor=vec4(vec3(gl_FragCoord.z).xyz,1);
-               return;
+                  gl_FragColor=vec4(1.);
+                  return;
                }
                vec3 finalColor=vColor;
 ${this.materialSource}
@@ -467,10 +467,10 @@ function loadGame(){
       }
    }
    float tiling=2.;
-   //float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
-   float squareVal=texture2D(shadowSampler,vec2(gl_FragCoord.x/570.,gl_FragCoord.y/570.)).x;
+   float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
+  float dVal=texture2D(shadowSampler,vec2(gl_FragCoord.x/570.,gl_FragCoord.y/570.)).x;
    float lightVal=1.-length(worldPos-playerVec)/drawDistance;
-   finalColor=squareVal*lightVal*lightScale*vec3(1.,0.,0.);
+   finalColor=squareVal*lightVal*lightScale*vec3(1.,0.,0.)+dVal*vec3(0.,0.,1.);
    `;
 
    
@@ -801,10 +801,18 @@ if (message.length > 0) {
                this.resolution=resolution;
                this.openingAngle=openingAngle;
                this.shaderProgram=shaderProgram;
+               this.Pmatrix=Pmatrix;
+               this.Vmatrix=Vmatrix;
                this.loc_unshaded=gl.getUniformLocation(shaderProgram, "unshaded");
-               this.loc_viewmatrix=gl.getUniformLocation(shaderProgram, "unshaded");
+      
                this.loc_lVM=gl.getUniformLocation(shaderProgram, "lightVMatrix");
                this.loc_lPM=gl.getUniformLocation(shaderProgram, "lightPMatrix");
+            
+               this.loc_Mmatrix=gl.getUniformLocation(shaderProgram,'Mmatrix')
+               gl.uniformMatrix4fv(Mmatrix, false, [1,0,0,0,
+               0,1,0,0,
+               0,0,1,0
+               ,0,0,0,1]);
                this.projectionMatrix=get_projection(this.openingAngle,1,1,100);
                this.shaderProgram=shaderProgram;
                this.bias=bias;
