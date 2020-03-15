@@ -864,14 +864,14 @@ if (message.length > 0) {
  
             }
 
-            bindSelf(unshaded){
+            bindSelf(){
                
-               gl.uniform1i(unshaded,1);
+         
                gl.bindFramebuffer(gl.FRAMEBUFFER,this.fb);  
             
             }
             freeSelf(){
-               gl.uniform1i(unshaded,0);
+             
                gl.bindFramebuffer(gl.FRAMEBUFFER,null); 
             }
             
@@ -949,7 +949,7 @@ if (message.length > 0) {
             shadowedLight1.setYaw(playerAngle)
             shadowedLight1.setPitch(playerPitch)
        
-        let primary_draw=(isShaded)=>{
+        let primary_draw=(isNotShaded)=>{
             gl.useProgram(shaderProgram);
             gl.bindTexture(gl.TEXTURE_2D, shadowedLight1.targetTexture);
             gl.enable(gl.DEPTH_TEST);
@@ -962,18 +962,17 @@ if (message.length > 0) {
             gl.uniform3fv(pVec,playerVec.toArray());
             gl.uniform1f(gameTime,time);
             gl.uniform1f(dD,30);
-            gl.uniform1i(unshaded,isShaded);
+            gl.uniform1i(unshaded,isNotShaded);
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
             gl.viewport(0.0, 0.0, canvas.width, canvas.height);
-            gl.bindTexture(gl.TEXTURE_2D, shadowedLight1.targetTexture);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
 
         }
         
-       shadowedLight1.bindSelf(unshaded);
+        shadowedLight1.bindSelf();
         primary_draw(1);
-       shadowedLight1.freeSelf(unshaded);
+        shadowedLight1.freeSelf();
         primary_draw(0);
 
 
