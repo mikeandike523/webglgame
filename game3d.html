@@ -468,7 +468,7 @@ function loadGame(){
    }
    float tiling=2.;
    float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
-  float dVal=texture2D(shadowSampler,vec2(gl_FragCoord.x/570.,gl_FragCoord.y/570.)).x;
+  float dVal=texture2D(shadowSampler,vec2(0.5,0.5)).x;
    float lightVal=1.-length(worldPos-playerVec)/drawDistance;
    finalColor=squareVal*lightVal*lightScale*vec3(1.,0.,0.)+dVal*vec3(0.,0.,1.);
    `;
@@ -809,14 +809,14 @@ if (message.length > 0) {
                this.loc_lPM=gl.getUniformLocation(shaderProgram, "lightPMatrix");
             
                this.loc_Mmatrix=gl.getUniformLocation(shaderProgram,'Mmatrix')
-               gl.uniformMatrix4fv(Mmatrix, false, [1,0,0,0,
-               0,1,0,0,
-               0,0,1,0
-               ,0,0,0,1]);
+             //  gl.uniformMatrix4fv(loc_Mmatrix, false, [1,0,0,0,
+              // 0,1,0,0,
+             //  0,0,1,0
+             //  ,0,0,0,1]);
                this.projectionMatrix=get_projection(this.openingAngle,1,1,100);
                this.shaderProgram=shaderProgram;
                this.bias=bias;
-               gl.uniformMatrix4fv(this.loc_lPM, false, this.projectionMatrix);
+               //gl.uniformMatrix4fv(this.loc_lPM, false, this.projectionMatrix);
                
                this.fb = gl.createFramebuffer();
            
@@ -862,13 +862,13 @@ if (message.length > 0) {
             
          
             bufferSelf(){
-               gl.uniform1i(this.loc_unshaded,1);
+              
                this.viewMatrix=lookMatrix(this.position,this.yaw,this.pitch);
-               gl.uniformMatrix4fv(this.loc_lVM, false, this.viewMatrix);
-               gl.uniformMatrix4fv(this.Pmatrix, false,this.projectionMatrix);
-             gl.uniformMatrix4fv(this.Vmatrix, false, this.viewMatrix);
+               ////gl.uniformMatrix4fv(this.loc_lVM, false, this.viewMatrix);
+               //gl.uniformMatrix4fv(this.Pmatrix, false,this.projectionMatrix);
+             //gl.uniformMatrix4fv(this.Vmatrix, false, this.viewMatrix);
              gl.bindFramebuffer(gl.FRAMEBUFFER, this.fb);
-
+             gl.uniform1i(this.loc_unshaded,1);
 
 // Tell WebGL how to convert from clip space to pixels
 gl.viewport(0, 0, this.resolution, this.resolution);
@@ -887,11 +887,11 @@ gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
 
 
-             
+             gl.uniform1i(this.loc_unshaded,0);
              gl.bindFramebuffer(gl.FRAMEBUFFER, null);
              gl.bindTexture(gl.TEXTURE_2D, this.targetTexture);
 
-             gl.uniform1i(this.loc_unshaded,0);
+           
      
             }
 
@@ -970,7 +970,7 @@ gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             shadowedLight1.setPitch(playerPitch)
             //gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
             shadowedLight1.bufferSelf();
-            
+            gl.bindTexture(gl.TEXTURE_2D, shadowedLight1.targetTexture);
             gl.enable(gl.DEPTH_TEST);
             gl.depthFunc(gl.LEQUAL);
             gl.clearColor(0,0,0,1);
