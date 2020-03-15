@@ -311,7 +311,7 @@ class world{
             void main(void) {
                if(unshaded==1)
                {
-                  gl_FragColor=vec4(1.);
+                  gl_FragColor=vec4(vec3(gl_FragCoord.z),1.);
               
                }else{
                vec3 finalColor=vColor;
@@ -469,9 +469,10 @@ function loadGame(){
    }
    float tiling=2.;
    float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
-  float dVal=texture2D(shadowSampler,vec2(0.5,0.5)).x;
+  float dVal=texture2D(shadowSampler,vec2(gl_FragCoord.x/570.,gl_FragCoord.y/570.)).x;
    float lightVal=1.-length(worldPos-playerVec)/drawDistance;
-   finalColor=squareVal*lightVal*lightScale*vec3(1.,0.,0.);
+   //finalColor=squareVal*lightVal*lightScale*vec3(1.,0.,0.);
+   finalColor=dVal*vec3(1.,1.,1.);
    `;
 
    
@@ -836,8 +837,8 @@ var shaderProgram2 = gl.createProgram();
                this.shaderProgram=theshaderProgram;
               
                gl.useProgram(this.shaderProgram);
-               this.Pmatrix=gl.getUniformLocation(this.shaderProgram, "PMatrix");
-               this.Vmatrix=gl.getUniformLocation(this.shaderProgram, "MMatrix");
+               this.Pmatrix=gl.getUniformLocation(this.shaderProgram, "Pmatrix");
+               this.Vmatrix=gl.getUniformLocation(this.shaderProgram, "Vmatrix");
            
                this.loc_lVM=gl.getUniformLocation(this.shaderProgram, "lightVMatrix");
                this.loc_lPM=gl.getUniformLocation(this.shaderProgram, "lightPMatrix");
@@ -851,7 +852,7 @@ var shaderProgram2 = gl.createProgram();
               
                this.bias=bias;
                gl.uniformMatrix4fv(this.loc_lPM, false, this.projectionMatrix);
-               
+               gl.uniform1i(this.loc_unshaded,1);
                this.fb = gl.createFramebuffer();
            
 
@@ -914,9 +915,9 @@ gl.viewport(0, 0, this.resolution, this.resolution);
 gl.clearColor(0, 0, 1, 1);   // clear to blue
 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-gl.uniform1i(this.loc_unshaded,1);
+
              gl.drawElements(gl.TRIANGLES, this.numIndices, gl.UNSIGNED_SHORT, 0);
-gl.uniform1i(this.loc_unshaded,0);
+
 
 
 
@@ -936,7 +937,7 @@ gl.uniform1i(this.loc_unshaded,0);
 
 
      
-         var shadowedLight1=new shadowedLight(playerVec,0,0,150,40,0.001,shaderProgram2)
+         var shadowedLight1=new shadowedLight(playerVec,0,0,570,40,0.001,shaderProgram2)
          gameWorld.setShadowedLight(shadowedLight1);
          gameWorld.build();
   
@@ -1008,6 +1009,7 @@ gl.uniform1i(this.loc_unshaded,0);
             //gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
             shadowedLight1.bufferSelf();
             gl.useProgram(shaderProgram);
+           // gl.uniform1i(unshaded,1);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             gl.bindTexture(gl.TEXTURE_2D, shadowedLight1.targetTexture);
             gl.enable(gl.DEPTH_TEST);
