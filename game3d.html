@@ -546,14 +546,19 @@ var vertCode = `attribute vec3 position;
             uniform mat4 Pmatrix;
             uniform mat4 Vmatrix;
             uniform mat4 Mmatrix;
+            uniform mat4 lightVMatrix;
+            uniform mat4 lightPMatrix;
           
             attribute vec3 color;
             varying vec3 vColor;
             varying vec3 worldPos;
+            varying vec4 shadowMapPos;
 
             void main(void) { 
                gl_Position = Pmatrix*Vmatrix*Mmatrix*vec4(position, 1.);
                worldPos=(Mmatrix*vec4(position, 1.)).zyx;
+               shadowMapPos = lightPMatrix*lightVMatrix*Mmatrix*vec4(position, 1.);
+
                vColor = color;
             }`;
 
