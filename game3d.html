@@ -700,7 +700,11 @@ if (message.length > 0) {
 
 
          function lookMatrix(position,yaw,pitch){
-
+            var look_matrix=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];
+            look_matrix=rotatedX(look_matrix,-pitch)
+            look_matrix=rotatedY(look_matrix,-(-yaw-Math.PI));
+            look_matrix=translated(look_matrix,new vec3(position.z,position.y,position.x).scale(-1));
+            return look_matrix;
          }
 
 /*
@@ -787,10 +791,8 @@ if (message.length > 0) {
             if(isKeyDown(Keys.d))
             playerVec.translate(new vec3(-dt*0.01*Math.sin(-playerAngle),0,dt*0.01*Math.cos(-playerAngle)).scale(-1))
 
-
-            view_matrix=rotatedX(view_matrix,-playerPitch)
-            view_matrix=rotatedY(view_matrix,-(-playerAngle-Math.PI));
-            view_matrix=translated(view_matrix,new vec3(playerVec.z,playerVec.y,playerVec.x).scale(-1));
+            view_matrix=lookMatrix(playerVec,playerAngle,playerPitch);
+            
           
             time_old = time;
 
