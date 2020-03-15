@@ -192,6 +192,10 @@ class world{
    colors=[]
    indices=[]
    materials=[]
+   shadowedlight=null;
+   setShadowedLight(shadowedlight){
+      this.shadowedlight=shadowedlight;
+   }
    reloadGeometry(gl,vertex_buffer,color_buffer,index_buffer){
         
          this.buildGeometry();
@@ -264,6 +268,8 @@ class world{
       for(var i=0;i<this.quads.length;i++){
          this.vertOrder.forEach((subIndex)=>this.indices.push(i*4+subIndex))
       }
+      if(this.shadowedlight!==null)
+      this.shadowedlight.setNumIndicies(this.numIndices);
    }
    build(){
       while(this.vertices.length>0)
@@ -303,9 +309,11 @@ class world{
             uniform sampler2D shadowSampler;
             ${this.uniformSource}
             void main(void) {
-               if(unshaded==1)
-               {gl_FragColor=vec4(0.,0.,0.,1);
-               return;}
+               if(true)
+               {
+                  gl_FragColor=vec4(vec3(gl_FragCoord.z).xyz,1);
+               return;
+               }
                vec3 finalColor=vColor;
 ${this.materialSource}
                gl_FragColor = vec4(finalColor, 1.);
@@ -459,7 +467,8 @@ function loadGame(){
       }
    }
    float tiling=2.;
-   float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
+   //float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
+   float squareVal=texture2D(shadowSampler,vec2(gl_FragCoord.x/570.,gl_FragCoord.y/570.)).x;
    float lightVal=1.-length(worldPos-playerVec)/drawDistance;
    finalColor=squareVal*lightVal*lightScale*vec3(1.,0.,0.);
    `;
@@ -780,8 +789,10 @@ if (message.length > 0) {
 
          class shadowedLight extends actor{
            
-            
-            constructor(position,yaw,pitch,resolution,openingAngle,bias,shaderProgram,Pmatrix,Vmatrix,numIndices){
+            setNumIndicies(numIndices){
+               this.numIndices=numIndices;
+            }
+            constructor(position,yaw,pitch,resolution,openingAngle,bias,shaderProgram,Pmatrix,Vmatrix){
                /*
                     uniform mat4 lightVMatrix;
                uniform mat4 lightPMatrix;
@@ -800,7 +811,7 @@ if (message.length > 0) {
                gl.uniformMatrix4fv(this.loc_lPM, false, this.projectionMatrix);
                
                this.fb = gl.createFramebuffer();
-               this.numIndices=numIndices;
+           
 
 
                   //create render target
@@ -868,17 +879,21 @@ gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
 
 
-
+             
              gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-               gl.uniform1i(this.loc_unshaded,0);
+             gl.bindTexture(gl.TEXTURE_2D, this.targetTexture);
+
+             gl.uniform1i(this.loc_unshaded,0);
+     
             }
 
          }     
 
 
      
-         var shadowedLight1=new shadowedLight(playerVec,0,0,150,40,0.001,shaderProgram,Pmatrix,Vmatrix,indices.length)
-    
+         var shadowedLight1=new shadowedLight(playerVec,0,0,150,40,0.001,shaderProgram,Pmatrix,Vmatrix)
+         gameWorld.setShadowedLight(shadowedLight1);
+         gameWorld.build();
   
          /*================= Drawing ===========================*/
          var time_old = 0;
@@ -940,12 +955,20 @@ gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             time_old = time;
 
 
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
+          
+            shadowedLight1.setPosition(playerVec)
+            shadowedLight1.setYaw(playerAngle)
+            shadowedLight1.setPitch(playerPitch)
+            //gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
+            shadowedLight1.bufferSelf();
             
             gl.enable(gl.DEPTH_TEST);
             gl.depthFunc(gl.LEQUAL);
             gl.clearColor(0,0,0,1);
             gl.clearDepth(1.0);
 
+           
            
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             gl.uniformMatrix4fv(Pmatrix, false, proj_matrix);
@@ -955,12 +978,9 @@ gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             gl.uniform1f(gameTime,time);
             gl.uniform1f(dD,30);
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
+          
 
-            shadowedLight1.setPosition(playerVec)
-            shadowedLight1.setYaw(playerAngle)
-            shadowedLight1.setPitch(playerPitch)
-
-            shadowedLight1.bufferSelf();
+           
             gl.viewport(0.0, 0.0, canvas.width, canvas.height);
             gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
            
