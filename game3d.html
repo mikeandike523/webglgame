@@ -844,15 +844,29 @@ if (message.length > 0) {
                      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
                   }
 
-                
+                     // Create and bind the framebuffer
+               this.fb = gl.createFramebuffer();
+               gl.bindFramebuffer(gl.FRAMEBUFFER, this.fb);
+               // attach the texture as the first color attachment
+               const attachmentPoint = gl.COLOR_ATTACHMENT0;
+               const level=0;
+               gl.framebufferTexture2D(gl.FRAMEBUFFER, attachmentPoint, gl.TEXTURE_2D, this.targetTexture, level);
+               gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
 
 
 
  
             }
-            bufferSelf(){
 
+            bindSelf(unshaded){
+               gl.uniform1i(unshaded,1);
+               gl.bindFramebuffer(gl.FRAMEBUFFER,this.fb);  
+            
+            }
+            freeSelf(){
+               gl.uniform1i(unshaded,0);
+               gl.bindFramebuffer(gl.FRAMEBUFFER,null); 
             }
             
          }     
@@ -929,8 +943,8 @@ if (message.length > 0) {
             shadowedLight1.setYaw(playerAngle)
             shadowedLight1.setPitch(playerPitch)
             //gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
-            shadowedLight1.bufferSelf();
-            gl.useProgram(shaderProgram);
+            
+          
            // gl.uniform1i(unshaded,1);
         
             gl.bindTexture(gl.TEXTURE_2D, shadowedLight1.targetTexture);
@@ -941,7 +955,7 @@ if (message.length > 0) {
 
            
            
-            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+           
             gl.uniformMatrix4fv(Pmatrix, false, proj_matrix);
             gl.uniformMatrix4fv(Vmatrix, false, view_matrix);
             gl.uniformMatrix4fv(Mmatrix, false, mov_matrix);
@@ -954,8 +968,23 @@ if (message.length > 0) {
            
             gl.viewport(0.0, 0.0, canvas.width, canvas.height);
             gl.bindTexture(gl.TEXTURE_2D, shadowedLight1.targetTexture);
+
+
+
+
+
+            shadowedLight1.bindSelf(unshaded);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
-           
+            shadowedLight1.freeSelf(unshaded);
+
+
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
+
+
+
+
             window.requestAnimationFrame(animate);
          }
          animate(0);
