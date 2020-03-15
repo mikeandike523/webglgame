@@ -312,11 +312,12 @@ class world{
                if(unshaded==1)
                {
                   gl_FragColor=vec4(1.);
-                  return;
-               }
+              
+               }else{
                vec3 finalColor=vColor;
 ${this.materialSource}
                gl_FragColor = vec4(finalColor, 1.);
+            }
             }`;
       
    }
@@ -470,7 +471,7 @@ function loadGame(){
    float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
   float dVal=texture2D(shadowSampler,vec2(0.5,0.5)).x;
    float lightVal=1.-length(worldPos-playerVec)/drawDistance;
-   finalColor=squareVal*lightVal*lightScale*vec3(1.,0.,0.)+dVal*vec3(0.,0.,1.);
+   finalColor=squareVal*lightVal*lightScale*vec3(1.,0.,0.);
    `;
 
    
@@ -608,7 +609,7 @@ if (message.length > 0) {
 
 
      
-
+         gl.useProgram(shaderProgram);
 
 
 
@@ -618,8 +619,8 @@ if (message.length > 0) {
          var Vmatrix = gl.getUniformLocation(shaderProgram, "Vmatrix");
          var Mmatrix = gl.getUniformLocation(shaderProgram, "Mmatrix");
          var gameTime=gl.getUniformLocation(shaderProgram, "gameTime");
-         
-        
+         var unshaded=gl.getUniformLocation(shaderProgram, "unshaded");
+       //  gl.uniform1i(unshaded,1);
          var pVec=gl.getUniformLocation(shaderProgram, "playerVec");
        
      
@@ -643,7 +644,7 @@ if (message.length > 0) {
 
          // Color
          gl.enableVertexAttribArray(color);
-         gl.useProgram(shaderProgram);
+         
          sector1.lightSelf(lights,numLights);
 
          /*==================== MATRIX =====================*/
@@ -792,7 +793,7 @@ if (message.length > 0) {
             setNumIndicies(numIndices){
                this.numIndices=numIndices;
             }
-            constructor(position,yaw,pitch,resolution,openingAngle,bias,shaderProgram,Pmatrix,Vmatrix){
+            constructor(position,yaw,pitch,resolution,openingAngle,bias,shaderProgram,Pmatrix,Vmatrix,unshaded){
                /*
                     uniform mat4 lightVMatrix;
                uniform mat4 lightPMatrix;
@@ -803,7 +804,8 @@ if (message.length > 0) {
                this.shaderProgram=shaderProgram;
                this.Pmatrix=Pmatrix;
                this.Vmatrix=Vmatrix;
-               this.loc_unshaded=gl.getUniformLocation(shaderProgram, "unshaded");
+               this.loc_unshaded=unshaded;
+              
       
                this.loc_lVM=gl.getUniformLocation(shaderProgram, "lightVMatrix");
                this.loc_lPM=gl.getUniformLocation(shaderProgram, "lightPMatrix");
@@ -862,13 +864,16 @@ if (message.length > 0) {
             
          
             bufferSelf(){
-              
+               gl.useProgram(this.shaderProgram)
+               
                this.viewMatrix=lookMatrix(this.position,this.yaw,this.pitch);
                ////gl.uniformMatrix4fv(this.loc_lVM, false, this.viewMatrix);
                //gl.uniformMatrix4fv(this.Pmatrix, false,this.projectionMatrix);
              //gl.uniformMatrix4fv(this.Vmatrix, false, this.viewMatrix);
-             gl.bindFramebuffer(gl.FRAMEBUFFER, this.fb);
-             gl.uniform1i(this.loc_unshaded,1);
+             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+             gl.bindTexture(gl.TEXTURE_2D, this.targetTexture);
+             
+             
 
 // Tell WebGL how to convert from clip space to pixels
 gl.viewport(0, 0, this.resolution, this.resolution);
@@ -877,9 +882,9 @@ gl.viewport(0, 0, this.resolution, this.resolution);
 gl.clearColor(0, 0, 1, 1);   // clear to blue
 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-
+gl.uniform1i(this.loc_unshaded,1);
              gl.drawElements(gl.TRIANGLES, this.numIndices, gl.UNSIGNED_SHORT, 0);
-
+gl.uniform1i(this.loc_unshaded,0);
 
 
 
@@ -887,7 +892,7 @@ gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
 
 
-             gl.uniform1i(this.loc_unshaded,0);
+     
              gl.bindFramebuffer(gl.FRAMEBUFFER, null);
              gl.bindTexture(gl.TEXTURE_2D, this.targetTexture);
 
@@ -899,7 +904,7 @@ gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
 
      
-         var shadowedLight1=new shadowedLight(playerVec,0,0,150,40,0.001,shaderProgram,Pmatrix,Vmatrix)
+         var shadowedLight1=new shadowedLight(playerVec,0,0,150,40,0.001,shaderProgram,Pmatrix,Vmatrix,unshaded)
          gameWorld.setShadowedLight(shadowedLight1);
          gameWorld.build();
   
@@ -970,6 +975,7 @@ gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             shadowedLight1.setPitch(playerPitch)
             //gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
             shadowedLight1.bufferSelf();
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             gl.bindTexture(gl.TEXTURE_2D, shadowedLight1.targetTexture);
             gl.enable(gl.DEPTH_TEST);
             gl.depthFunc(gl.LEQUAL);
