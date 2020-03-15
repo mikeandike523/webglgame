@@ -198,6 +198,9 @@ class world{
    }
    reloadGeometry(gl,vertex_buffer,color_buffer,index_buffer){
         
+
+
+
          this.buildGeometry();
      
          gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
@@ -269,7 +272,7 @@ class world{
          this.vertOrder.forEach((subIndex)=>this.indices.push(i*4+subIndex))
       }
       if(this.shadowedlight!==null)
-      this.shadowedlight.setNumIndicies(this.numIndices);
+      this.shadowedlight.setNumIndicies(this.indices.length);
    }
    build(){
       while(this.vertices.length>0)
@@ -471,8 +474,8 @@ function loadGame(){
    float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
   float dVal=texture2D(shadowSampler,vec2(gl_FragCoord.x/570.,gl_FragCoord.y/570.)).x;
    float lightVal=1.-length(worldPos-playerVec)/drawDistance;
-   //finalColor=squareVal*lightVal*lightScale*vec3(1.,0.,0.);
-   finalColor=dVal*vec3(1.,1.,1.);
+   finalColor=squareVal*lightVal*lightScale*vec3(1.,0.,0.)+dVal*lightVal*vec3(0.,0.,1.);
+  
    `;
 
    
@@ -611,33 +614,9 @@ if (message.length > 0) {
 
 
    
-         var vertShader2 = gl.createShader(gl.VERTEX_SHADER);
-         gl.shaderSource(vertShader2, vertCode);
-         gl.compileShader(vertShader2);
-            console.log("vslog")
-var message = gl.getShaderInfoLog(vertShader2);
-
-if (message.length > 0) {
-  /* message may be an error or a warning */
-  throw message;
-}
-         var fragShader2 = gl.createShader(gl.FRAGMENT_SHADER);
-         gl.shaderSource(fragShader2, fragCode);
-         gl.compileShader(fragShader2);
-         console.log("fslog")
-         var message = gl.getShaderInfoLog(fragShader2);
-
-if (message.length > 0) {
-  /* message may be an error or a warning */
-  throw message;
-}
+ 
 
 
-
-var shaderProgram2 = gl.createProgram();
-         gl.attachShader(shaderProgram2, vertShader2);
-         gl.attachShader(shaderProgram2, fragShader2);
-         gl.linkProgram(shaderProgram2);
 
 
      
@@ -825,7 +804,7 @@ var shaderProgram2 = gl.createProgram();
             setNumIndicies(numIndices){
                this.numIndices=numIndices;
             }
-            constructor(position,yaw,pitch,resolution,openingAngle,bias,theshaderProgram){
+            constructor(position,yaw,pitch,resolution,openingAngle,bias){
                /*
                     uniform mat4 lightVMatrix;
                uniform mat4 lightPMatrix;
@@ -834,44 +813,27 @@ var shaderProgram2 = gl.createProgram();
 
                this.resolution=resolution;
                this.openingAngle=openingAngle;
-               this.shaderProgram=theshaderProgram;
-              
-               gl.useProgram(this.shaderProgram);
-               this.Pmatrix=gl.getUniformLocation(this.shaderProgram, "Pmatrix");
-               this.Vmatrix=gl.getUniformLocation(this.shaderProgram, "Vmatrix");
-           
-               this.loc_lVM=gl.getUniformLocation(this.shaderProgram, "lightVMatrix");
-               this.loc_lPM=gl.getUniformLocation(this.shaderProgram, "lightPMatrix");
-               this.loc_unshaded=gl.getUniformLocation(this.shaderProgram, "unshaded");
-               this.loc_Mmatrix=gl.getUniformLocation(this.shaderProgram,'Mmatrix')
-              gl.uniformMatrix4fv(this.loc_Mmatrix, false, [1,0,0,0,
-              0,1,0,0,
-              0,0,1,0
-              ,0,0,0,1]);
-               this.projectionMatrix=get_projection(this.openingAngle,1,1,100);
-              
-               this.bias=bias;
-               gl.uniformMatrix4fv(this.loc_lPM, false, this.projectionMatrix);
-               gl.uniform1i(this.loc_unshaded,1);
-               this.fb = gl.createFramebuffer();
-           
-
-
-                  //create render target
-                                 // Create a texture to render to
-                  const targetTextureWidth = resolution;
-                  const targetTextureHeight = resolution;
+              this.bias=bias;
                   this.targetTexture = gl.createTexture();
                   gl.bindTexture(gl.TEXTURE_2D, this.targetTexture);
 
                   {
+                     const targetTextureWidth = 570;
+                      const targetTextureHeight = 570;
                      // define size and format of level 0
                      const level = 0;
                      const internalFormat = gl.RGBA;
                      const border = 0;
                      const format = gl.RGBA;
                      const type = gl.UNSIGNED_BYTE;
-                     const data = null;
+                     var theData=[]
+                     for(var i=0;i<570*570;i++){
+                        theData.push(i%2==0?0:255);
+                        theData.push(i%2==0?0:255);
+                        theData.push(i%2==0?0:255);
+                        theData.push(255);
+                     }
+                     const data =new Uint8Array(theData);
                      gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
                                     targetTextureWidth, targetTextureHeight, border,
                                     format, type, data);
@@ -882,62 +844,22 @@ var shaderProgram2 = gl.createProgram();
                      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
                   }
 
-                  gl.bindFramebuffer(gl.FRAMEBUFFER, this.fb);
-                  // attach the texture as the first color attachment
-                  const attachmentPoint = gl.COLOR_ATTACHMENT0;
-                  const level = 0;
-                  gl.framebufferTexture2D(gl.FRAMEBUFFER, attachmentPoint, gl.TEXTURE_2D, this.targetTexture, level);
-
+                
 
 
 
 
  
             }
-            
-         
             bufferSelf(){
-               gl.useProgram(this.shaderProgram);
-               
-               this.viewMatrix=lookMatrix(this.position,this.yaw,this.pitch);
-            gl.uniformMatrix4fv(this.loc_lVM, false, this.viewMatrix);
-               gl.uniformMatrix4fv(this.Pmatrix, false,this.projectionMatrix);
-             gl.uniformMatrix4fv(this.Vmatrix, false, this.viewMatrix);
-             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-             gl.bindTexture(gl.TEXTURE_2D, this.targetTexture);
-             
-             
 
-// Tell WebGL how to convert from clip space to pixels
-gl.viewport(0, 0, this.resolution, this.resolution);
-
-// Clear the attachment(s).
-gl.clearColor(0, 0, 1, 1);   // clear to blue
-gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-
-             gl.drawElements(gl.TRIANGLES, this.numIndices, gl.UNSIGNED_SHORT, 0);
-
-
-
-
-            
-
-
-
-     
-             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-             gl.bindTexture(gl.TEXTURE_2D, this.targetTexture);
-
-           
-     
             }
-
+            
          }     
 
 
      
-         var shadowedLight1=new shadowedLight(playerVec,0,0,570,40,0.001,shaderProgram2)
+         var shadowedLight1=new shadowedLight(playerVec,0,0,570,40,0.001)
          gameWorld.setShadowedLight(shadowedLight1);
          gameWorld.build();
   
@@ -1010,7 +932,7 @@ gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             shadowedLight1.bufferSelf();
             gl.useProgram(shaderProgram);
            // gl.uniform1i(unshaded,1);
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        
             gl.bindTexture(gl.TEXTURE_2D, shadowedLight1.targetTexture);
             gl.enable(gl.DEPTH_TEST);
             gl.depthFunc(gl.LEQUAL);
@@ -1031,6 +953,7 @@ gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
            
             gl.viewport(0.0, 0.0, canvas.width, canvas.height);
+            gl.bindTexture(gl.TEXTURE_2D, shadowedLight1.targetTexture);
             gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
            
             window.requestAnimationFrame(animate);
