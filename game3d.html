@@ -156,9 +156,9 @@ class mazeMesh{ //square
 //1,0.,0.5 
 //this.quads.push(new quad3(new vec3(-subunitScale,height,subunitScale).translate(worldOffset),new vec3(subunitScale,height,subunitScale).translate(worldOffset),new vec3(subunitScale,height,-subunitScale).translate(worldOffset),new vec3(-subunitScale,height,-subunitScale).translate(worldOffset),new vec3(1,0,0.5 )));
 
-               this.lightsData.push(...new vec3(0,2.5,0).translate(worldOffset).toArray());
+               this.lightsData.push(...new vec3(0,2.5,0).translate(worldOffset).swizzle('zyx').toArray());
             } else if(Math.abs(worldZCell-pXCell)<=7&&Math.abs(worldXCell-pZCell)<=7){
-               this.lightsData.push(...new vec3(0,2.5,0).translate(worldOffset).toArray());
+               this.lightsData.push(...new vec3(0,2.5,0).translate(worldOffset).swizzle('zyx').toArray());
             }
       
 
@@ -443,7 +443,7 @@ function loadGame(){
    for(int i=0;i<49;i++){
       if(i<numLights){
       vec3 lightPos = lights[i];
-      lightScale=lightScale+2.6*clamp(1.-length(worldPos-lightPos.zyx)/6.8,0.,1.);
+      lightScale=lightScale+2.6*clamp(1.-length(worldPos-lightPos)/6.8,0.,1.);
       }
    }
    float tiling=2.;
@@ -643,12 +643,14 @@ if (message.length > 0) {
 
          var mov_matrix = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
 
-         var playerAngle=0;//angle made with z axis
+         var playerAngle=0;// yaw angle made with z axis (xz plane), positive is towards the right
 
 
-         var playerPitch=0;
+         var playerPitch=0; //pitch angle made with z axis (zy plane), positive is up
          var playerVec = new vec3(0,2,0);
          
+      
+
          function cellChanged(newpXCell,newpZCell){
         
          pXCell=newpXCell;
@@ -696,6 +698,11 @@ if (message.length > 0) {
             return result;
          }
 
+
+         function lookMatrix(position,yaw,pitch){
+
+         }
+
 /*
          function rotateX(m, angle) {
             var c = Math.cos(angle);
@@ -740,9 +747,9 @@ if (message.length > 0) {
             var dt = time-time_old;
            // rotateZ(mov_matrix, dt*0.005);//time
         if(isKeyDown(Keys.left))
-            playerAngle+=dt*0.006;
-            if(isKeyDown(Keys.right))
             playerAngle-=dt*0.006;
+            if(isKeyDown(Keys.right))
+            playerAngle+=dt*0.006;
     
 
         
@@ -772,17 +779,17 @@ if (message.length > 0) {
             }
 
             if(isKeyDown(Keys.w))
-            playerVec.translate(new vec3(dt*0.01*Math.cos(playerAngle),0,dt*0.01*Math.sin(playerAngle)))
+            playerVec.translate(new vec3(dt*0.01*Math.cos(-playerAngle),0,dt*0.01*Math.sin(-playerAngle)))
             if(isKeyDown(Keys.a))
-            playerVec.translate(new vec3(-dt*0.01*Math.sin(playerAngle),0,dt*0.01*Math.cos(playerAngle)))
+            playerVec.translate(new vec3(-dt*0.01*Math.sin(-playerAngle),0,dt*0.01*Math.cos(-playerAngle)))
             if(isKeyDown(Keys.s))
-            playerVec.translate(new vec3(dt*0.01*Math.cos(playerAngle),0,dt*0.01*Math.sin(playerAngle)).scale(-1))
+            playerVec.translate(new vec3(dt*0.01*Math.cos(-playerAngle),0,dt*0.01*Math.sin(-playerAngle)).scale(-1))
             if(isKeyDown(Keys.d))
-            playerVec.translate(new vec3(-dt*0.01*Math.sin(playerAngle),0,dt*0.01*Math.cos(playerAngle)).scale(-1))
+            playerVec.translate(new vec3(-dt*0.01*Math.sin(-playerAngle),0,dt*0.01*Math.cos(-playerAngle)).scale(-1))
 
 
             view_matrix=rotatedX(view_matrix,-playerPitch)
-            view_matrix=rotatedY(view_matrix,-(playerAngle-Math.PI));
+            view_matrix=rotatedY(view_matrix,-(-playerAngle-Math.PI));
             view_matrix=translated(view_matrix,new vec3(playerVec.z,playerVec.y,playerVec.x).scale(-1));
           
             time_old = time;
