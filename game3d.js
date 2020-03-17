@@ -184,7 +184,7 @@ class mazeMesh { //square
 
 
 
-function loadDebugQuad(gl, vertex_buffer, color_buffer, index_buffer,Mmatrix,Vmatrix,Pmatrix,renderingFB) {
+function loadDebugQuad(gl, vertex_buffer, color_buffer, index_buffer) {
 
 
     
@@ -200,11 +200,7 @@ function loadDebugQuad(gl, vertex_buffer, color_buffer, index_buffer,Mmatrix,Vma
         // Create and store data into index buffer
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0,1,2,2,3,0]), gl.STATIC_DRAW);
-        gl.uniformMatrix4fv(Pmatrix, false, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
-		gl.uniformMatrix4fv(Vmatrix, false, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
-        gl.uniformMatrix4fv(Mmatrix, false, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
-        gl.uniform1i(renderingFB,1);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0,1,2,2,3,0]), gl.STATIC_DRAW)
 
     
 }
@@ -338,24 +334,11 @@ class world {
             varying vec4 shadowMapPos;
             uniform vec3 playerVec;
             uniform float gameTime;
-            uniform int unshaded;
-            uniform int renderingFB;
-            uniform sampler2D shadowSampler;
             ${this.uniformSource}
             void main(void) {
-                if(renderingFB==1){
-                    gl_FragColor=texture2D(shadowSampler,vec2(gl_FragCoord.x/570.,gl_FragCoord.y/570.));
-                    return;
-                }
-               if(unshaded==1)
-               {
-                  gl_FragColor=vec4(vec3(gl_FragCoord.z),1.);
-              
-               }else{
                 vec3 finalColor=vColor;
                 ${this.materialSource}
                gl_FragColor = vec4(finalColor, 1.);
-            }
             }`;
 
 	}
@@ -513,7 +496,7 @@ function loadGame() {
    }
    float tiling=2.;
    float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
-  float dVal=texture2D(shadowSampler,vec2(gl_FragCoord.x/570.,gl_FragCoord.y/570.)).x;
+  float dVal=1.;
    float lightVal=1.-length(worldPos-playerVec)/drawDistance;
    finalColor=squareVal*lightVal*lightScale*vec3(1.,0.,0.)+dVal*lightVal*vec3(0.,0.,1.);
   
@@ -615,69 +598,60 @@ gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW)
 /*=================== Shaders =========================*/
 
 
-//
+function getProgram(vertCode,fragCode){
+
+	var vertShader = gl.createShader(gl.VERTEX_SHADER);
+	gl.shaderSource(vertShader, vertCode);
+	gl.compileShader(vertShader);
+	var message = gl.getShaderInfoLog(vertShader);
+	if (message.length > 0) {
+		/* message may be an error or a warning */
+		throw message;
+	}
+	var fragShader = gl.createShader(gl.FRAGMENT_SHADER);
+	gl.shaderSource(fragShader, fragCode);
+	gl.compileShader(fragShader);
+	console.log("fslog")
+	var message = gl.getShaderInfoLog(fragShader);
+	if (message.length > 0) {
+		/* message may be an error or a warning */
+		throw message;
+	}
+	
+	var shaderProgram = gl.createProgram();
+	gl.attachShader(shaderProgram, vertShader);
+	gl.attachShader(shaderProgram, fragShader);
+	gl.linkProgram(shaderProgram);
+	return shaderProgram;
+	
+	
+}
+
+
 var vertCode = `attribute vec3 position;
             uniform mat4 Pmatrix;
             uniform mat4 Vmatrix;
             uniform mat4 Mmatrix;
-            uniform mat4 lightVMatrix;
-            uniform mat4 lightPMatrix;
+    
           
             attribute vec3 color;
             varying vec3 vColor;
             varying vec3 worldPos;
-            varying vec4 shadowMapPos;
+        
 
             void main(void) { 
                gl_Position = Pmatrix*Vmatrix*Mmatrix*vec4(position, 1.);
                worldPos=(Mmatrix*vec4(position, 1.)).zyx;
-               shadowMapPos = lightPMatrix*lightVMatrix*Mmatrix*vec4(position, 1.);
+           
 
                vColor = color;
             }`;
 
-/* var fragCode = `precision mediump float;
-    varying vec3 vColor;
-    varying vec3 worldPos;
-    
-    void main(void) {
-       float sF= worldPos.x<0.&&worldPos.z<0.?(1.-length(worldPos)/(12.)):1.;
-       gl_FragColor = vec4(sF*vColor, 1.);
-    }`;*/
+
 var fragCode = gameWorld.getFragCode();
-console.log(fragCode)
-
-
-var vertShader = gl.createShader(gl.VERTEX_SHADER);
-gl.shaderSource(vertShader, vertCode);
-gl.compileShader(vertShader);
-console.log("vslog")
-var message = gl.getShaderInfoLog(vertShader);
-
-if (message.length > 0) {
-	/* message may be an error or a warning */
-	throw message;
-}
-var fragShader = gl.createShader(gl.FRAGMENT_SHADER);
-gl.shaderSource(fragShader, fragCode);
-gl.compileShader(fragShader);
-console.log("fslog")
-var message = gl.getShaderInfoLog(fragShader);
-
-if (message.length > 0) {
-	/* message may be an error or a warning */
-	throw message;
-}
-
-//next, we will use 3 programs, a lighting rendering program, a rendering program (samples texture), and a debugQuad program (samples texture)
-//next step, keep the rendering program and work on a debugquad program
-//remove reading texutre from rendering program
-//we will also make a function to easily create a program
-
-var shaderProgram = gl.createProgram();
-gl.attachShader(shaderProgram, vertShader);
-gl.attachShader(shaderProgram, fragShader);
-gl.linkProgram(shaderProgram);
+var shaderProgram=getProgram(vertCode,fragCode);
+var debugProgram=getProgram(`attribute vec3 position;attribute vec3 color;
+void main(void){gl_Position=vec4(position,1.);}`,`uniform sampler2D fbTex; void main(void){gl_FragColor=texture2D(fbTex,vec2(gl_FragCoord.x/570.,gl_FragCoord.y/570.));}`)
 
 
 gl.useProgram(shaderProgram);
@@ -998,7 +972,9 @@ var animate = function (time) {
 	shadowedLight1.setYaw(playerAngle)
 	shadowedLight1.setPitch(playerPitch)
 
-	let primary_draw = (isNotShaded) => {
+	let primary_draw = () => {
+		shadowedLight1.bindSelf();
+		gameWorld.reloadGeometry(gl, vertex_buffer, color_buffer, index_buffer);
 		gl.useProgram(shaderProgram);
 		gl.bindTexture(gl.TEXTURE_2D, shadowedLight1.targetTexture);
 		gl.enable(gl.DEPTH_TEST);
@@ -1011,28 +987,27 @@ var animate = function (time) {
 		gl.uniform3fv(pVec, playerVec.toArray());
 		gl.uniform1f(gameTime, time);
 		gl.uniform1f(dD, 30);
-		gl.uniform1i(unshaded, isNotShaded);
+
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
 		gl.viewport(0.0, 0.0, canvas.width, canvas.height);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        gl.uniform1i(renderingFB,0);
-       shadowedLight1.bindSelf();
-        gameWorld.reloadGeometry(gl, vertex_buffer, color_buffer, index_buffer);
+     
+	 
+        
         gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
-        shadowedLight1.freeSelf()
-        loadDebugQuad(gl, vertex_buffer, color_buffer, index_buffer,Mmatrix,Vmatrix,Pmatrix,renderingFB);
-       gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+		shadowedLight1.freeSelf()
+
+
+
+		gl.useProgram(debugProgram);
+		loadDebugQuad(gl, vertex_buffer, color_buffer, index_buffer);
+		gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
        
        
 
 	}
 
-	//shadowedLight1.bindSelf(); //a light that binds its renderbuffer
-	//primary_draw(1);
-	//shadowedLight1.freeSelf();
-
-
-	primary_draw(1);
+	primary_draw();
 
 
 	window.requestAnimationFrame(animate);
