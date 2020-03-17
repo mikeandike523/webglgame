@@ -183,28 +183,38 @@ class mazeMesh { //square
 }
 
 
-class debugQuadRenderer {
-	/*
-	         // Create and store data into vertex buffer
-	         var vertex_buffer = gl.createBuffer ();
-	         gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
-	         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 
-	         // Create and store data into color buffer
-	         var color_buffer = gl.createBuffer ();
-	         gl.bindBuffer(gl.ARRAY_BUFFER, color_buffer);
-	         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+function loadDebugQuad(gl, vertex_buffer, color_buffer, index_buffer,Mmatrix,Vmatrix,Pmatrix,renderingFB) {
 
-	         // Create and store data into index buffer
-	         var index_buffer = gl.createBuffer ();
-	         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
-	         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-	         */
+
+    
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertex_buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,1,0.001,1,1,0.001,1,-1,0.001,-1,-1,0.001]), gl.STATIC_DRAW);
+
+        // Create and store data into color buffer
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, color_buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0,0,0,0,0,0,0,0,0,0,0,0]), gl.STATIC_DRAW);
+
+        // Create and store data into index buffer
+
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0,1,2,2,3,0]), gl.STATIC_DRAW);
+        gl.uniformMatrix4fv(Pmatrix, false, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+		gl.uniformMatrix4fv(Vmatrix, false, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+        gl.uniformMatrix4fv(Mmatrix, false, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+        gl.uniform1i(renderingFB,1);
+
+    
 }
 
 
+ 
+
+
 class world {
-	fragCode = ``;
+    fragCode = ``;
 	uniformSource = ''
 	uniformsUsed = []
 	materialSource = ""
@@ -329,16 +339,21 @@ class world {
             uniform vec3 playerVec;
             uniform float gameTime;
             uniform int unshaded;
+            uniform int renderingFB;
             uniform sampler2D shadowSampler;
             ${this.uniformSource}
             void main(void) {
+                if(renderingFB==1){
+                    gl_FragColor=texture2D(shadowSampler,vec2(gl_FragCoord.x/570.,gl_FragCoord.y/570.));
+                    return;
+                }
                if(unshaded==1)
                {
                   gl_FragColor=vec4(vec3(gl_FragCoord.z),1.);
               
                }else{
-               vec3 finalColor=vColor;
-${this.materialSource}
+                vec3 finalColor=vColor;
+                ${this.materialSource}
                gl_FragColor = vec4(finalColor, 1.);
             }
             }`;
@@ -669,6 +684,7 @@ var Vmatrix = gl.getUniformLocation(shaderProgram, "Vmatrix");
 var Mmatrix = gl.getUniformLocation(shaderProgram, "Mmatrix");
 var gameTime = gl.getUniformLocation(shaderProgram, "gameTime");
 var unshaded = gl.getUniformLocation(shaderProgram, "unshaded");
+var renderingFB = gl.getUniformLocation(shaderProgram, "renderingFB");
 //  gl.uniform1i(unshaded,1);
 var pVec = gl.getUniformLocation(shaderProgram, "playerVec");
 
@@ -686,6 +702,7 @@ gl.vertexAttribPointer(position, 3, gl.FLOAT, false, 0, 0);
 
 // Position
 gl.enableVertexAttribArray(position);
+
 gl.bindBuffer(gl.ARRAY_BUFFER, color_buffer);
 var color = gl.getAttribLocation(shaderProgram, "color");
 gl.vertexAttribPointer(color, 3, gl.FLOAT, false, 0, 0);
@@ -992,17 +1009,25 @@ var animate = function (time) {
 		gl.uniform1i(unshaded, isNotShaded);
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
 		gl.viewport(0.0, 0.0, canvas.width, canvas.height);
-		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-		gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.uniform1i(renderingFB,0);
+       shadowedLight1.bindSelf();
+        gameWorld.reloadGeometry(gl, vertex_buffer, color_buffer, index_buffer);
+        gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
+        shadowedLight1.freeSelf()
+        loadDebugQuad(gl, vertex_buffer, color_buffer, index_buffer,Mmatrix,Vmatrix,Pmatrix,renderingFB);
+       gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+       
+       
 
 	}
 
-	shadowedLight1.bindSelf(); //a light that binds its renderbuffer
+	//shadowedLight1.bindSelf(); //a light that binds its renderbuffer
+	//primary_draw(1);
+	//shadowedLight1.freeSelf();
+
+
 	primary_draw(1);
-	shadowedLight1.freeSelf();
-
-
-	primary_draw(0);
 
 
 	window.requestAnimationFrame(animate);
