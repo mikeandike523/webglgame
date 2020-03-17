@@ -331,7 +331,7 @@ class world {
 		this.fragCode = `precision mediump float;
             varying vec3 vColor;
             varying vec3 worldPos;
-            varying vec4 shadowMapPos;
+            uniform sampler2D fbTex;
             uniform vec3 playerVec;
             uniform float gameTime;
             ${this.uniformSource}
@@ -496,10 +496,10 @@ function loadGame() {
    }
    float tiling=2.;
    float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
-  float dVal=1.;
+   float dVal=texture2D(fbTex,vec2(gl_FragCoord.x/570.,gl_FragCoord.y/570.)).x;
    float lightVal=1.-length(worldPos-playerVec)/drawDistance;
-   finalColor=squareVal*lightVal*lightScale*vec3(1.,0.,0.)+dVal*lightVal*vec3(0.,0.,1.);
-  
+   //finalColor=squareVal*lightVal*lightScale*vec3(1.,0.,0.)+
+   finalColor=dVal*lightVal*vec3(0.,0.,1.);
    `;
 
 
@@ -649,21 +649,31 @@ var vertCode = `attribute vec3 position;
 
 
 var fragCode = gameWorld.getFragCode();
+var lightingProgram = getProgram(vertCode,`
+			void main(void){
+				gl_FragColor=vec4(vec3(gl_FragCoord.z),1.);
+			}
+`);
 var shaderProgram=getProgram(vertCode,fragCode);
 var debugProgram=getProgram(`attribute vec3 position;attribute vec3 color;
 void main(void){gl_Position=vec4(position,1.);}`,`uniform sampler2D fbTex; void main(void){gl_FragColor=texture2D(fbTex,vec2(gl_FragCoord.x/570.,gl_FragCoord.y/570.));}`)
 
 
+gl.useProgram(lightingProgram);
+var LPmatrix = gl.getUniformLocation(lightingProgram, "Pmatrix");
+var LVmatrix = gl.getUniformLocation(lightingProgram, "Vmatrix");
+var LMmatrix = gl.getUniformLocation(lightingProgram, "Mmatrix");
+var LgameTime = gl.getUniformLocation(lightingProgram, "gameTime");
+
+
 gl.useProgram(shaderProgram);
-
-
 /* ====== Associating attributes to vertex shader =====*/
 var Pmatrix = gl.getUniformLocation(shaderProgram, "Pmatrix");
 var Vmatrix = gl.getUniformLocation(shaderProgram, "Vmatrix");
 var Mmatrix = gl.getUniformLocation(shaderProgram, "Mmatrix");
 var gameTime = gl.getUniformLocation(shaderProgram, "gameTime");
-var unshaded = gl.getUniformLocation(shaderProgram, "unshaded");
-var renderingFB = gl.getUniformLocation(shaderProgram, "renderingFB");
+
+
 //  gl.uniform1i(unshaded,1);
 var pVec = gl.getUniformLocation(shaderProgram, "playerVec");
 
@@ -972,20 +982,32 @@ var animate = function (time) {
 	shadowedLight1.setYaw(playerAngle)
 	shadowedLight1.setPitch(playerPitch)
 
-	let primary_draw = () => {
-		shadowedLight1.bindSelf();
-		gameWorld.reloadGeometry(gl, vertex_buffer, color_buffer, index_buffer);
-		gl.useProgram(shaderProgram);
+	let primary_draw = (pass) => {
+		if(pass==0){
+			shadowedLight1.bindSelf();
+			gl.useProgram(lightingProgram);
+		}
+		if(pass==1){
+			gl.useProgram(shaderProgram);
+		}
+		
+		if(pass==1)
 		gl.bindTexture(gl.TEXTURE_2D, shadowedLight1.targetTexture);
+
 		gl.enable(gl.DEPTH_TEST);
 		gl.depthFunc(gl.LEQUAL);
 		gl.clearColor(0, 0, 0, 1);
 		gl.clearDepth(1.0);
-		gl.uniformMatrix4fv(Pmatrix, false, proj_matrix);
-		gl.uniformMatrix4fv(Vmatrix, false, view_matrix);
-		gl.uniformMatrix4fv(Mmatrix, false, mov_matrix);
+		gl.uniformMatrix4fv(pass==1?Pmatrix:LPmatrix, false, proj_matrix);
+		gl.uniformMatrix4fv(pass==1?Vmatrix:LVmatrix, false, view_matrix);
+		gl.uniformMatrix4fv(pass==1?Mmatrix:LMmatrix, false, mov_matrix);
+
+		if(pass==1)
 		gl.uniform3fv(pVec, playerVec.toArray());
-		gl.uniform1f(gameTime, time);
+
+		gl.uniform1f(pass==1?gameTime:LgameTime, time);
+
+		if(pass==1)
 		gl.uniform1f(dD, 30);
 
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
@@ -994,20 +1016,18 @@ var animate = function (time) {
      
 	 
         
-        gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
-		shadowedLight1.freeSelf()
-
-
-
-		gl.useProgram(debugProgram);
-		loadDebugQuad(gl, vertex_buffer, color_buffer, index_buffer);
-		gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+		gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
+		
+		if(pass==0){
+			shadowedLight1.freeSelf();
+		}
        
        
 
 	}
 
-	primary_draw();
+	primary_draw(0);
+	primary_draw(1);
 
 
 	window.requestAnimationFrame(animate);
