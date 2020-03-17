@@ -1,5 +1,5 @@
 
-
+const lightRes = 40;
 var pXCell = 0;
 var pZCell = 0;
 
@@ -854,12 +854,17 @@ class shadowedLight extends actor {
 		this.resolution = resolution;
 		this.openingAngle = openingAngle;
 		this.bias = bias;
+
+
+
+
 		this.targetTexture = gl.createTexture();
+		
 		gl.bindTexture(gl.TEXTURE_2D, this.targetTexture);
 
 		{
-			const targetTextureWidth = 570;
-			const targetTextureHeight = 570;
+			const targetTextureWidth = lightRes;
+			const targetTextureHeight = lightRes;
 			// define size and format of level 0
 			const level = 0;
 			const internalFormat = gl.RGBA;
@@ -867,7 +872,7 @@ class shadowedLight extends actor {
 			const format = gl.RGBA;
 			const type = gl.UNSIGNED_BYTE;
 			var theData = []
-			for (var i = 0; i < 570 * 570; i++) {
+			for (var i = 0; i < lightRes*lightRes; i++) {
 				theData.push(i % 2 == 0 ? 0 : 255);
 				theData.push(i % 2 == 0 ? 0 : 255);
 				theData.push(i % 2 == 0 ? 0 : 255);
@@ -883,6 +888,10 @@ class shadowedLight extends actor {
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 		}
+		
+
+
+
 
 		// Create and bind the framebuffer
 		this.fb = gl.createFramebuffer();
@@ -891,6 +900,19 @@ class shadowedLight extends actor {
 		const attachmentPoint = gl.COLOR_ATTACHMENT0;
 		const level = 0;
 		gl.framebufferTexture2D(gl.FRAMEBUFFER, attachmentPoint, gl.TEXTURE_2D, this.targetTexture, level);
+	
+
+		const targetTextureWidth = lightRes;
+			const targetTextureHeight = lightRes;
+		const depthBuffer = gl.createRenderbuffer();
+		gl.bindRenderbuffer(gl.RENDERBUFFER, depthBuffer);
+
+		// make a depth buffer and the same size as the targetTexture
+		gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, targetTextureWidth, targetTextureHeight);
+		gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depthBuffer);
+
+
+
 		if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
 			throw "framebuffer is not complete";
 		}
@@ -1011,6 +1033,10 @@ var animate = function (time) {
 		gl.uniform1f(dD, 30);
 
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, index_buffer);
+
+		if(pass==0)
+		gl.viewport(0.0,0.0,lightRes,lightRes);
+		if(pass==1)
 		gl.viewport(0.0, 0.0, canvas.width, canvas.height);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
      
