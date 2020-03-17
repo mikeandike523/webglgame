@@ -1,5 +1,5 @@
 
-const lightRes = 40;
+const lightRes = 75;
 var pXCell = 0;
 var pZCell = 0;
 
@@ -333,7 +333,8 @@ class world {
             varying vec3 worldPos;
             uniform sampler2D fbTex;
             uniform vec3 playerVec;
-            uniform float gameTime;
+			uniform float gameTime;
+			uniform float bias;
             ${this.uniformSource}
             void main(void) {
                 vec3 finalColor=vColor;
@@ -508,8 +509,8 @@ function loadGame() {
 
 
    )<570./4.){
-   	if(gl_FragCoord.z<dVal+0.001){
-		finalColor=finalColor+(1.-dVal)*vec3(1.,1.,1.);
+   	if(gl_FragCoord.z<dVal+bias){
+		finalColor=finalColor+3.*(1.-dVal)*vec3(1.,1.,1.);
 	}
    }
  
@@ -686,6 +687,10 @@ var Pmatrix = gl.getUniformLocation(shaderProgram, "Pmatrix");
 var Vmatrix = gl.getUniformLocation(shaderProgram, "Vmatrix");
 var Mmatrix = gl.getUniformLocation(shaderProgram, "Mmatrix");
 var gameTime = gl.getUniformLocation(shaderProgram, "gameTime");
+var bias = gl.getUniformLocation(shaderProgram,"bias");
+
+//set the bias
+gl.uniform1f(bias,0.005);
 
 
 //  gl.uniform1i(unshaded,1);
@@ -898,7 +903,9 @@ class shadowedLight extends actor {
 				format, type, data);
 
 			// set the filtering so we don't need mips
-			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+			//is nearest or linear better? dont know, for now use nearest
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_FILTER, gl.NEAREST);
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 		}
