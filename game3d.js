@@ -669,6 +669,11 @@ if (message.length > 0) {
 	throw message;
 }
 
+//next, we will use 3 programs, a lighting rendering program, a rendering program (samples texture), and a debugQuad program (samples texture)
+//next step, keep the rendering program and work on a debugquad program
+//remove reading texutre from rendering program
+//we will also make a function to easily create a program
+
 var shaderProgram = gl.createProgram();
 gl.attachShader(shaderProgram, vertShader);
 gl.attachShader(shaderProgram, fragShader);
