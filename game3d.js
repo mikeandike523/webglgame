@@ -497,9 +497,23 @@ function loadGame() {
    float tiling=2.;
    float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
    float dVal=texture2D(fbTex,vec2(gl_FragCoord.x/570.,gl_FragCoord.y/570.)).x;
+
    float lightVal=1.-length(worldPos-playerVec)/drawDistance;
-   //finalColor=squareVal*lightVal*lightScale*vec3(1.,0.,0.)+
-   finalColor=dVal*lightVal*vec3(0.,0.,1.);
+   finalColor=squareVal*lightVal*lightScale*vec3(1.,0.,0.);
+   if(length(
+	vec2(
+		gl_FragCoord.x-570./2.,570./2.-gl_FragCoord.y
+
+	)
+
+
+   )<570./4.){
+   	if(gl_FragCoord.z<dVal+0.001){
+		finalColor=finalColor+(1.-dVal)*vec3(1.,1.,1.);
+	}
+   }
+ 
+
    `;
 
 
