@@ -176,6 +176,7 @@ class mazeMesh { //square
 		this.quads.forEach((q) => w.addQuad(q))
 	}
 	lightSelf(lightsLocation, numLightsLocation) {
+		gl.useProgram(shaderProgram)
 
 		gl.uniform3fv(lightsLocation, new Float32Array(this.lightsData));
 		gl.uniform1i(numLightsLocation, Math.floor(this.lightsData.length / 3.));
@@ -203,6 +204,11 @@ function loadDebugQuad(gl, vertex_buffer, color_buffer, index_buffer) {
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0,1,2,2,3,0]), gl.STATIC_DRAW)
 
     
+}
+function drawDebugQuad(gl){
+	gl.useProgram(debugProgram)
+	gl.viewport(0.0, 0.0, canvas.width, canvas.height);
+	gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
 }
 
 
@@ -330,13 +336,24 @@ class world {
 		this.buildGeometry()
 		this.fragCode = `precision mediump float;
             varying vec3 vColor;
-            varying vec3 worldPos;
+			varying vec3 worldPos;
+			varying vec3 trueWorldPos;
             uniform sampler2D fbTex;
             uniform vec3 playerVec;
 			uniform float gameTime;
 			uniform float bias;
+			uniform mat4 lightPmatrix;
+			uniform mat4 lightVmatrix;
+
             ${this.uniformSource}
             void main(void) {
+				vec4 lightTexPos= lightPmatrix*lightVmatrix*vec4(trueWorldPos, 1.);
+				vec2 texVec=vec2(lightTexPos.x/2.+0.5,0.5-lightTexPos.y/2.);
+				int isInLightFrustum =1;
+				if (length(lightTexPos.xy)>1.||lightTexPos.z<0.)
+					isInLightFrustum=0;
+
+
                 vec3 finalColor=vColor;
                 ${this.materialSource}
                gl_FragColor = vec4(finalColor, 1.);
@@ -497,23 +514,26 @@ function loadGame() {
    }
    float tiling=2.;
    float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
-   float dVal=texture2D(fbTex,vec2(gl_FragCoord.x/570.,gl_FragCoord.y/570.)).x;
 
+ 
+ 
    float lightVal=1.-length(worldPos-playerVec)/drawDistance;
    finalColor=squareVal*lightVal*lightScale*vec3(1.,0.,0.);
-   if(length(
-	vec2(
-		gl_FragCoord.x-570./2.,570./2.-gl_FragCoord.y
-
-	)
-
-
-   )<570./4.){
-   	if(gl_FragCoord.z<dVal+bias){
-		finalColor=finalColor+3.*(1.-dVal)*vec3(1.,1.,1.);
-	}
-   }
  
+
+   if(isInLightFrustum==1)
+  
+	{
+		
+		float dVal=texture2D(fbTex,texVec).x;
+		if(lightTexPos.z<dVal+bias){
+			finalColor=finalColor+3.*(1.-dVal)*vec3(1.,1.,1.);
+		}
+		finalColor=vec3(dVal);
+
+	}
+
+
 
    `;
 
@@ -647,16 +667,18 @@ var vertCode = `attribute vec3 position;
             uniform mat4 Pmatrix;
             uniform mat4 Vmatrix;
             uniform mat4 Mmatrix;
-    
+		
           
             attribute vec3 color;
             varying vec3 vColor;
-            varying vec3 worldPos;
+			varying vec3 worldPos;
+			varying vec3 trueWorldPos;
         
 
             void main(void) { 
                gl_Position = Pmatrix*Vmatrix*Mmatrix*vec4(position, 1.);
-               worldPos=(Mmatrix*vec4(position, 1.)).zyx;
+			   worldPos=(Mmatrix*vec4(position, 1.)).zyx;
+			   trueWorldPos=(Mmatrix*vec4(position, 1.)).xyz;
            
 
                vColor = color;
@@ -688,6 +710,8 @@ var Vmatrix = gl.getUniformLocation(shaderProgram, "Vmatrix");
 var Mmatrix = gl.getUniformLocation(shaderProgram, "Mmatrix");
 var gameTime = gl.getUniformLocation(shaderProgram, "gameTime");
 var bias = gl.getUniformLocation(shaderProgram,"bias");
+var lightVmatrix = gl.getUniformLocation(shaderProgram,"lightVmatrix");
+var lightPmatrix=gl.getUniformLocation(shaderProgram,"lightPmatrix")
 
 //set the bias
 gl.uniform1f(bias,0.005);
@@ -874,6 +898,7 @@ class shadowedLight extends actor {
 		this.openingAngle = openingAngle;
 		this.bias = bias;
 
+		this.projectionMatrix=get_projection(this.openingAngle,1,1,100);
 
 
 
@@ -958,7 +983,7 @@ class shadowedLight extends actor {
 }
 
 
-var shadowedLight1 = new shadowedLight(playerVec, 0, 0, 570, 40, 0.001)
+var shadowedLight1 = new shadowedLight(new vec3(0,3,0), Math.PI/10, 0, 570, 90, 0.005)
 gameWorld.setShadowedLight(shadowedLight1);
 gameWorld.build();
 
@@ -1020,10 +1045,11 @@ var animate = function (time) {
 
 	time_old = time;
 
-
+	/*
 	shadowedLight1.setPosition(playerVec)
 	shadowedLight1.setYaw(playerAngle)
 	shadowedLight1.setPitch(playerPitch)
+	*/
 
 	let primary_draw = (pass) => {
 		if(pass==0){
@@ -1039,12 +1065,20 @@ var animate = function (time) {
 
 		gl.enable(gl.DEPTH_TEST);
 		gl.depthFunc(gl.LEQUAL);
+		if(pass==0)
+		gl.clearColor(1,1,1,1);
+		if(pass==1)
 		gl.clearColor(0, 0, 0, 1);
 		gl.clearDepth(1.0);
-		gl.uniformMatrix4fv(pass==1?Pmatrix:LPmatrix, false, proj_matrix);
-		gl.uniformMatrix4fv(pass==1?Vmatrix:LVmatrix, false, view_matrix);
+		
+		gl.uniformMatrix4fv(pass==1?Pmatrix:LPmatrix, false, pass==1?proj_matrix:shadowedLight1.projectionMatrix);
+		gl.uniformMatrix4fv(pass==1?Vmatrix:LVmatrix, false, pass==1?view_matrix:lookMatrix(shadowedLight1.position,shadowedLight1.yaw,shadowedLight1.pitch));
 		gl.uniformMatrix4fv(pass==1?Mmatrix:LMmatrix, false, mov_matrix);
 
+		if(pass==1){
+			gl.uniformMatrix4fv(lightVmatrix,false,lookMatrix(shadowedLight1.position,shadowedLight1.yaw,shadowedLight1.pitch));
+			gl.uniformMatrix4fv(lightPmatrix,false,shadowedLight1.projectionMatrix);
+		}
 		if(pass==1)
 		gl.uniform3fv(pVec, playerVec.toArray());
 
@@ -1073,7 +1107,12 @@ var animate = function (time) {
 
 	}
 
+	//gameWorld.reloadGeometry(gl, vertex_buffer, color_buffer, index_buffer)
 	primary_draw(0);
+
+	//loadDebugQuad(gl,vertex_buffer,color_buffer,index_buffer);
+	//drawDebugQuad(gl);
+
 	primary_draw(1);
 
 
