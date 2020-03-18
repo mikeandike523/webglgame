@@ -1,5 +1,5 @@
 
-const lightRes = 100;
+const lightRes = 200;
 var pXCell = 0;
 var pZCell = 0;
 
@@ -338,6 +338,7 @@ class world {
             varying vec3 vColor;
 			varying vec3 worldPos;
 			varying vec3 trueWorldPos;
+			varying vec4 variedPosition;
             uniform sampler2D fbTex;
             uniform vec3 playerVec;
 			uniform float gameTime;
@@ -345,16 +346,18 @@ class world {
 			uniform mat4 lightPmatrix;
 			uniform mat4 lightVmatrix;
 
-            ${this.uniformSource}
+			${this.uniformSource}
             void main(void) {
 				vec4 lightClipPos= lightPmatrix*lightVmatrix*vec4(trueWorldPos, 1.);
 				vec3 lightTexPos=lightClipPos.xyz/lightClipPos.w;
-				lightTexPos.z=lightTexPos.z/2.+0.5;
+	
+			//	lightTexPos.z=lightTexPos.z;
+			
 
-				vec2 texVec=vec2(lightTexPos.x/2.+0.5,0.5-lightTexPos.y/2.);
+				vec2 texVec=vec2(lightTexPos.x/2.+0.5,0.5+lightTexPos.y/2.);
 				int isInLightFrustum =1;
 				//for now, hard coded near plane of 1.
-				if (length(lightTexPos.xy)>1.||lightClipPos.z<1.)
+				if (length(lightTexPos.xy)>1.||lightTexPos.z>1.)
 					isInLightFrustum=0;
 
 
@@ -535,8 +538,7 @@ function loadGame() {
 		if(lightTexPos.z<dVal+bias){
 			finalColor=finalColor+3.*(1.-dVal)*vec3(1.,1.,1.);
 		}
-	
-
+		
 	}
 
 
@@ -679,12 +681,13 @@ var vertCode = `attribute vec3 position;
             varying vec3 vColor;
 			varying vec3 worldPos;
 			varying vec3 trueWorldPos;
-        
+			varying vec4 variedPosition;
 
             void main(void) { 
                gl_Position = Pmatrix*Vmatrix*Mmatrix*vec4(position, 1.);
 			   worldPos=(Mmatrix*vec4(position, 1.)).zyx;
 			   trueWorldPos=(Mmatrix*vec4(position, 1.)).xyz;
+			   variedPosition=Pmatrix*Vmatrix*Mmatrix*vec4(position, 1.);
            
 
                vColor = color;
@@ -693,8 +696,13 @@ var vertCode = `attribute vec3 position;
 
 var fragCode = gameWorld.getFragCode();
 var lightingProgram = getProgram(vertCode,`
-			void main(void){
-				gl_FragColor=vec4(vec3(gl_FragCoord.z),1.);
+			precision highp float;
+			varying vec4 variedPosition;
+	void main(void){
+				
+				float theDepth=0.;
+				theDepth=variedPosition.z/variedPosition.w;
+				gl_FragColor=vec4(vec3(theDepth),1.);
 			}
 `);
 var shaderProgram=getProgram(vertCode,fragCode);
@@ -1117,7 +1125,7 @@ var animate = function (time) {
 	primary_draw(0);
 
 	//loadDebugQuad(gl,vertex_buffer,color_buffer,index_buffer);
-	//drawDebugQuad(gl);
+//	drawDebugQuad(gl);
 
 	primary_draw(1);
 
