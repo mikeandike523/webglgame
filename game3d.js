@@ -350,7 +350,7 @@ class world {
 				vec4 lightTexPos= lightPmatrix*lightVmatrix*vec4(trueWorldPos, 1.);
 				vec2 texVec=vec2(lightTexPos.x/2.+0.5,0.5-lightTexPos.y/2.);
 				int isInLightFrustum =1;
-				if (length(lightTexPos.xy)>1.||lightTexPos.z<0.)
+				if (length(lightTexPos.xy)>3.||lightTexPos.z<0.)
 					isInLightFrustum=0;
 
 
