@@ -1,5 +1,5 @@
 
-const lightRes = 75;
+const lightRes = 100;
 var pXCell = 0;
 var pZCell = 0;
 
@@ -347,10 +347,14 @@ class world {
 
             ${this.uniformSource}
             void main(void) {
-				vec4 lightTexPos= lightPmatrix*lightVmatrix*vec4(trueWorldPos, 1.);
+				vec4 lightClipPos= lightPmatrix*lightVmatrix*vec4(trueWorldPos, 1.);
+				vec3 lightTexPos=lightClipPos.xyz/lightClipPos.w;
+				lightTexPos.z=lightTexPos.z/2.+0.5;
+
 				vec2 texVec=vec2(lightTexPos.x/2.+0.5,0.5-lightTexPos.y/2.);
 				int isInLightFrustum =1;
-				if (length(lightTexPos.xy)>3.||lightTexPos.z<0.)
+				//for now, hard coded near plane of 1.
+				if (length(lightTexPos.xy)>1.||lightClipPos.z<1.)
 					isInLightFrustum=0;
 
 
@@ -503,6 +507,8 @@ var sector1;
 
 function loadGame() {
 
+	//forgot the perspective divide!!!!!
+
 	//for now, use a hardcoded subunit of 5
 	var materialSource = `
    float lightScale=0.;
@@ -519,7 +525,7 @@ function loadGame() {
  
    float lightVal=1.-length(worldPos-playerVec)/drawDistance;
    finalColor=squareVal*lightVal*lightScale*vec3(1.,0.,0.);
- 
+
 
    if(isInLightFrustum==1)
   
@@ -529,7 +535,7 @@ function loadGame() {
 		if(lightTexPos.z<dVal+bias){
 			finalColor=finalColor+3.*(1.-dVal)*vec3(1.,1.,1.);
 		}
-		finalColor=vec3(dVal);
+	
 
 	}
 
@@ -929,8 +935,8 @@ class shadowedLight extends actor {
 
 			// set the filtering so we don't need mips
 			//is nearest or linear better? dont know, for now use nearest
-			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_FILTER, gl.NEAREST);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_FILTER, gl.LINEAR);
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 		}
@@ -983,7 +989,7 @@ class shadowedLight extends actor {
 }
 
 
-var shadowedLight1 = new shadowedLight(new vec3(0,3,0), Math.PI/10, 0, 570, 40, 0.005)
+var shadowedLight1 = new shadowedLight(new vec3(0,1,0), Math.PI/10, 0, 570, 20, 0.005)
 gameWorld.setShadowedLight(shadowedLight1);
 gameWorld.build();
 
