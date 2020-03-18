@@ -536,7 +536,7 @@ function loadGame() {
 		
 		float dVal=texture2D(fbTex,texVec).x;
 		if(lightTexPos.z<dVal+bias){
-			finalColor=finalColor+3.*(1.-dVal)*vec3(1.,1.,1.);
+			finalColor=finalColor+3.*(1.-lightTexPos.z)*vec3(1.,1.,1.);
 		}
 		
 	}
