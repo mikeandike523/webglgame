@@ -1,4 +1,4 @@
-//enum for vectors
+//enum for vector properties
 VectorProperties={orientation:{row:0,column:1}}
 
 // all matrices use single dimensional arrays
@@ -152,15 +152,24 @@ class matrix{
         return new vector(this.numColumns,VectorProperties.orientation.row).fromArray(this.getRowSlice(i))
     }
 
-    //mutating matrix operations
+    
     translate(d){
         return this.setData((i,j)=>this.query(i,j)+d.query(i,j));
+    }
+    translated(d){
+        return this.copy().translate(d)
     }
     scale(s){
         return this.setData((i,j)=>s*this.query(i,j));
     }
+    scaled(s){
+        return this.copy().scale(s)
+    }
     elementByElementMultiply(m){
         return this.setData((i,j)=>this.query(i,j)*d.query(i,j))
+    }
+    elementByElementMultiplied(m){
+        return this.copy().elementByElementMultiply(m);
     }
     transpose(){
         var transposedMatrix=this.transposed()
@@ -183,13 +192,108 @@ class matrix{
         return this.fromMatrix(leftMultipliedByMatrix)
     }
 
-    //non-mutating matrix operations
     transposed(){
         return new matrix(this.numColumns,this.numRows).setData((i,j)=>this.query(j,i))
     }
+
     leftMultipliedBy(m){
         this.assureMultiplySizingValid(m)
         return new matrix(m.numRows,this.numColumns).setData((i,j)=>m.getRow(i).dot(this.getColumn(j)));
+    }
+    
+
+}
+
+//class for specifically 4 by 4 matrix
+class matrix4 extends matrix{
+    constructor(data){
+        if(typeof data == 'undefined')
+        super(4,4)
+        
+        if(Array.isArray(data))
+        {
+            super(4,4)
+            this.fromArray(data)
+        }
+    }
+    copy(){
+        return new matrix4(this.data);
+    }
+
+
+    //3d applications
+    //note, opengl is column major, our system is row major and needs to be transposed into opengl
+    //this can be done with the "transpose" argument set to true when using gl.uniformMatrix4fv
+
+    //for now, we can exclude roll
+
+    //used later for yaw
+    getYRotationMatrix(angle){
+        return new matrix4([
+            Math.cos(angle),0,Math.sin(angle),0,
+            0,1,0,0
+            -Math.sin(angle),0,Math.cos(angle),0,
+            0,0,0,1
+        ]);
+    }
+
+    //used later for pitch
+    getXRotationMatrix(angle){
+        return new matrix4([
+            1,0,0,0,
+            0,Math.cos(angle),-Math.sin(angle),0,
+            0,Math.sin(angle),Math.cos(angle),0,
+            0,0,0,1
+        ])
+    }
+
+    getScalingMatrix(s){ //vector3
+        return new matrix4([
+            s.getX(),0,0,0,
+            0,s.getY(),0,0,
+            0,0,s.getZ(),0,
+            0,0,0,1
+        ]);
+    }
+
+    getTranslationMatrix(d){ //vector3
+
+        return new matrix4([
+            1,0,0,s.getX(),
+            0,1,0,s.getY(),
+            0,0,1,s.getZ(),
+            0,0,0,1
+
+        ])
+
+    }
+
+    //recall, camera cooordinates are assumed -z, so we need a matrix to multiply flip z before projection
+    //we will do so by using getScalingMatrix with 1,1,-1
+    getProjectionMatrix(openingAngle,near,far,aspectRatio){
+  
+        return new matrix4([
+            0.5/openingAngle,0,0,0,
+            0,0.5*aspectRatio/openingAngle,0,0,
+            0,0,-(far + near) / (far - near),(-2 * far * near) / (far - near),
+            0,0,-1,0
+        ]);
+    }
+
+    toXRotationMatrix(angle){
+        return this.fromMatrix(this.getXRotationMatrix(angle));
+    }
+    toYRotationMatrix(angle){
+        return this.fromMatrix(this.getYRotationMatrix(angle));
+    }
+    toProjectionMatrix(openingAngle,near,far,aspectRatio){
+        return this.fromMatrix(this.getProjectionMatrix(openingAngle,near,far,aspectRatio));
+    }
+    toScalingMatrix(s){
+        return this.fromMatrix(this.getScalingMatrix(s))
+    }
+    toTranslationMatrix(d){
+        return this.fromMatrix(this.getTranslationMatrix(d))
     }
 
 }
