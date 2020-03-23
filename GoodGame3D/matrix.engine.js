@@ -187,7 +187,7 @@ class matrix{
     }
 
     leftMultiply(m){
-        var leftMultipliedByMatrix=this.leftMultipledBy(m)
+        var leftMultipliedByMatrix=this.leftMultipliedBy(m)
         this.numRows=m.numRows;
         return this.fromMatrix(leftMultipliedByMatrix)
     }
@@ -259,9 +259,9 @@ class matrix4 extends matrix{
     getTranslationMatrix(d){ //vector3
 
         return new matrix4([
-            1,0,0,s.getX(),
-            0,1,0,s.getY(),
-            0,0,1,s.getZ(),
+            1,0,0,d.getX(),
+            0,1,0,d.getY(),
+            0,0,1,d.getZ(),
             0,0,0,1
 
         ])
