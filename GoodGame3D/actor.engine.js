@@ -1,3 +1,5 @@
+//useful to have as global
+var zFlipper=new matrix4().toScalingMatrix(new vector3(1,1,-1));
 class actor{
 
     //+ yaw is to the right (+x)
@@ -12,7 +14,6 @@ class actor{
     getViewMatrix(){
         var yRotation=this.yaw;
         var xRotation=-this.pitch;
-        var zFlipper=new matrix4().toScalingMatrix(new vector3(1,1,-1));
         var yawMatrix=new matrix4().toYRotationMatrix(yRotation);
         var pitchMatrix=new matrix4().toXRotationMatrix(xRotation);
         var translationMatrix=new matrix4().toTranslationMatrix(this.position.scaled(-1))
