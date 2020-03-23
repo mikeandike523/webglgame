@@ -53,7 +53,7 @@ class matrix{
     }
 
     //set the matrix to the identity matrix
-    identity(){
+    toIdentity(){
         return this.setData((i,j)=>i==j?1:0);
     }
 
@@ -200,7 +200,14 @@ class matrix{
         this.assureMultiplySizingValid(m)
         return new matrix(m.numRows,this.numColumns).setData((i,j)=>m.getRow(i).dot(this.getColumn(j)));
     }
-    
+
+    fromColumnArray(columns){
+        return this.setData((i,j)=>columns[j].getElement(i))
+    }
+
+    fromRowArray(rows){
+        return this.setData((i,j)=>rows[i].getElement(j))
+    }
 
 }
 
@@ -220,6 +227,7 @@ class matrix4 extends matrix{
         return new matrix4(this.data);
     }
 
+ 
 
     //3d applications
     //note, opengl is column major, our system is row major and needs to be transposed into opengl
@@ -228,7 +236,7 @@ class matrix4 extends matrix{
     //for now, we can exclude roll
 
     //used later for yaw
-    getYRotationMatrix(angle){
+    static getYRotationMatrix(angle){
         return new matrix4([
             Math.cos(angle),0,Math.sin(angle),0,
             0,1,0,0,
@@ -238,7 +246,7 @@ class matrix4 extends matrix{
     }
 
     //used later for pitch
-    getXRotationMatrix(angle){
+    static getXRotationMatrix(angle){
         return new matrix4([
             1,0,0,0,
             0,Math.cos(angle),-Math.sin(angle),0,
@@ -247,7 +255,7 @@ class matrix4 extends matrix{
         ])
     }
 
-    getScalingMatrix(s){ //vector3
+    static getScalingMatrix(s){ //vector3
         return new matrix4([
             s.getX(),0,0,0,
             0,s.getY(),0,0,
@@ -256,7 +264,7 @@ class matrix4 extends matrix{
         ]);
     }
 
-    getTranslationMatrix(d){ //vector3
+    static getTranslationMatrix(d){ //vector3
 
         return new matrix4([
             1,0,0,d.getX(),
@@ -270,7 +278,7 @@ class matrix4 extends matrix{
 
     //recall, camera cooordinates are assumed -z, so we need a matrix to multiply flip z before projection
     //we will do so by using getScalingMatrix with 1,1,-1
-    getProjectionMatrix(openingAngle,near,far,aspectRatio){
+    static getProjectionMatrix(openingAngle,near,far,aspectRatio){
   
         return new matrix4([
             0.5/openingAngle,0,0,0,
@@ -281,20 +289,22 @@ class matrix4 extends matrix{
     }
 
     toXRotationMatrix(angle){
-        return this.fromMatrix(this.getXRotationMatrix(angle));
+        return this.fromMatrix(matrix4.getXRotationMatrix(angle));
     }
     toYRotationMatrix(angle){
-        return this.fromMatrix(this.getYRotationMatrix(angle));
+        return this.fromMatrix(matrix4.getYRotationMatrix(angle));
     }
     toProjectionMatrix(openingAngle,near,far,aspectRatio){
-        return this.fromMatrix(this.getProjectionMatrix(openingAngle,near,far,aspectRatio));
+        return this.fromMatrix(matrix4.getProjectionMatrix(openingAngle,near,far,aspectRatio));
     }
     toScalingMatrix(s){
-        return this.fromMatrix(this.getScalingMatrix(s))
+        return this.fromMatrix(matrix4.getScalingMatrix(s))
     }
     toTranslationMatrix(d){
-        return this.fromMatrix(this.getTranslationMatrix(d))
+        return this.fromMatrix(matrix4.getTranslationMatrix(d))
     }
+
+
 
 }
 
@@ -420,5 +430,58 @@ class vector3 extends vector{
         return this.getElement(2)
     }
 
+    getHomogenous(){
+        return new vector4(this.getX(),this.getY(),this.getZ(),1)
+    }
+
 }
 
+class vector4 extends vector{
+    constructor(x,y,z,w){
+        super(4,VectorProperties.orientation.row)
+        this.fromArray([x,y,z,w]);
+    }
+    copy(){
+        return new vector4(this.getElement(0),this.getElement(1),this.getElement(2),this.getElement(3));
+    }
+
+    setXYZW(x,y,z,w){
+        this.fromArray(x,y,z,w);
+    }
+    
+    setX(x){
+        this.setElement(0,x);
+    }
+
+    setY(y){
+        this.setElement(1,y);
+    }
+
+    setZ(z){
+        this.setElement(2,z);
+    }
+
+    setW(w){
+        this.setElement(3,w);
+    }
+
+    getX(){
+        return this.getElement(0)
+    }
+
+    getY(){
+        return this.getElement(1)
+    }
+
+    getZ(){
+        return this.getElement(2)
+    }
+
+    getW(){
+        return this.getElement(3)
+    }
+
+    wShaved(){
+        return new vector3(this.getX(),this.getY(),this.getZ())
+    }
+}

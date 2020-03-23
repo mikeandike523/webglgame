@@ -10,14 +10,13 @@ class actor{
         this.pitch=pitch;
     }
 
-    //here we account for the backwards z convention
-    getViewMatrix(){
-        var yRotation=this.yaw;
-        var xRotation=-this.pitch;
-        var yawMatrix=new matrix4().toYRotationMatrix(yRotation);
-        var pitchMatrix=new matrix4().toXRotationMatrix(xRotation);
-        var translationMatrix=new matrix4().toTranslationMatrix(this.position.scaled(-1))
-        return new matrix4().identity().leftMultiply(zFlipper).leftMultiply(pitchMatrix).leftMultiply(yawMatrix).leftMultiply(translationMatrix);
+    getModelMatrix(){
+        var yRotation=-this.yaw;
+        var xRotation=this.pitch;
+        var yawMatrix=matrix4.getYRotationMatrix(yRotation);
+        var pitchMatrix=matrix4.getXRotationMatrix(xRotation);
+        var translationMatrix=matrix4.getTranslationMatrix(this.position)
+        return new matrix4().toIdentity().leftMultiply(pitchMatrix).leftMultiply(yawMatrix).leftMultiply(translationMatrix);
     }
-
+   
 }
