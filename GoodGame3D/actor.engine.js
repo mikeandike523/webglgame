@@ -14,11 +14,9 @@ class actor{
     getViewMatrix(){
         var yRotation=this.yaw;
         var xRotation=-this.pitch;
-        var yawMatrix=new matrix4().toYRotationMatrix(yRotation);
-       
+        var yawMatrix=new matrix4().getYRotationMatrix(yRotation);
         var pitchMatrix=new matrix4().toXRotationMatrix(xRotation);
         var translationMatrix=new matrix4().toTranslationMatrix(this.position.scaled(-1))
-        console.log(translationMatrix)
         return new matrix4().identity().leftMultiply(zFlipper).leftMultiply(pitchMatrix).leftMultiply(yawMatrix).leftMultiply(translationMatrix);
     }
 
