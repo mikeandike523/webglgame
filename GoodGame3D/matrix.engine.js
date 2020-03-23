@@ -231,7 +231,7 @@ class matrix4 extends matrix{
     getYRotationMatrix(angle){
         return new matrix4([
             Math.cos(angle),0,Math.sin(angle),0,
-            0,1,0,0
+            0,1,0,0,
             -Math.sin(angle),0,Math.cos(angle),0,
             0,0,0,1
         ]);
