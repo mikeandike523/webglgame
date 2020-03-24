@@ -24,13 +24,16 @@ class quad extends matrix4{
 
 }
 
+//includes gpuTools calls
 class mesh{
     quads=[]
     vertices=[]
     indices=[]
+   
     constructor(){
-        
-        //allocate and set buffer properites here
+        var ids = gpuTools.allocateAndInitMesh(); //this will also set vertex attrib pointer
+        this.vertexArrayId=ids.vao;
+        this.vertexBufferId=ids.vbo;
     }
     addQuad(q){
         this.quads.push(q)
@@ -41,20 +44,18 @@ class mesh{
     }
 
     ///build the data for the arrays
-    //we will actually have verticies in the shader that have 4 coordinateds
     build(){
         utils.clearArray(this.vertices)
         utils.clearArray(this.indices)
-
         for(var i=0;i<this.quads.length;i++){
             var currentQuad=this.quads[i];
             utils.extendArray(this.vertices,currentQuad.getData())
             utils.extendArray(this.indices,utils.offsetArray(i*6,[0,1,2,2,3,0]))
         }
-
-        //do a buffer data command here
     }
 
-    //gpuTools.drawMesh will bind buffers for this mesh and get the data from the mesh member variable
+    loadToGPU(){
+        gpuTools.loadMeshData(this.vertexArrayId,this.vertexBufferId)
+    }
 
 }
