@@ -159,9 +159,9 @@ class mazeMesh { //square
 					//1,0.,0.5 
 					//this.quads.push(new quad3(new vec3(-subunitScale,height,subunitScale).translate(worldOffset),new vec3(subunitScale,height,subunitScale).translate(worldOffset),new vec3(subunitScale,height,-subunitScale).translate(worldOffset),new vec3(-subunitScale,height,-subunitScale).translate(worldOffset),new vec3(1,0,0.5 )));
 
-					this.lightsData.push(...new vec3(0, 2.5, 0).translate(worldOffset).swizzle('zyx').toArray());
+					this.lightsData.push(...new vec3(0, 2.5, 0).translate(worldOffset).toArray());
 				} else if (Math.abs(worldZCell - pXCell) <= 7 && Math.abs(worldXCell - pZCell) <= 7) {
-					this.lightsData.push(...new vec3(0, 2.5, 0).translate(worldOffset).swizzle('zyx').toArray());
+					this.lightsData.push(...new vec3(0, 2.5, 0).translate(worldOffset).toArray());
 				}
 
 
@@ -336,8 +336,8 @@ class world {
 		this.buildGeometry()
 		this.fragCode = `precision mediump float;
             varying vec3 vColor;
-			varying vec3 worldPos;
 			varying vec3 trueWorldPos;
+		
 			varying vec4 variedPosition;
             uniform sampler2D fbTex;
             uniform vec3 playerVec;
@@ -518,15 +518,15 @@ function loadGame() {
    for(int i=0;i<49;i++){
       if(i<numLights){
       vec3 lightPos = lights[i];
-      lightScale=lightScale+2.6*clamp(1.-length(worldPos-lightPos)/6.8,0.,1.);
+      lightScale=lightScale+2.6*clamp(1.-length(trueWorldPos-lightPos)/6.8,0.,1.);
       }
    }
    float tiling=2.;
-   float squareVal=mod(floor(mod(worldPos.x,1.)*tiling)+floor(mod(worldPos.y,1.)*tiling)+floor(mod(worldPos.z,1.)*tiling),2.)<0.001?1.:0.;
+   float squareVal=mod(floor(mod(trueWorldPos.x,1.)*tiling)+floor(mod(trueWorldPos.y,1.)*tiling)+floor(mod(trueWorldPos.z,1.)*tiling),2.)<0.001?1.:0.;
 
  
  
-   float lightVal=1.-length(worldPos-playerVec)/drawDistance;
+   float lightVal=1.-length(trueWorldPos-playerVec)/drawDistance;
    finalColor=squareVal*lightVal*lightScale*vec3(1.,0.,0.);
 
 
@@ -594,7 +594,7 @@ function loadGame() {
 
 		1, 1, 1, 1, 1, 1, 0,
 		1, 0, 1, 0, 1, 1, 1,
-		1, 0, 1, 1, 1, 0, 1,
+		1, 0, 1, 0, 0, 0, 1,
 		0, 0, 1, 1, 1, 0, 0,
 		1, 1, 1, 1, 0, 1, 0,
 		1, 0, 1, 0, 1, 1, 1,
@@ -679,13 +679,13 @@ var vertCode = `attribute vec3 position;
           
             attribute vec3 color;
             varying vec3 vColor;
-			varying vec3 worldPos;
+		
 			varying vec3 trueWorldPos;
 			varying vec4 variedPosition;
 
             void main(void) { 
                gl_Position = Pmatrix*Vmatrix*Mmatrix*vec4(position, 1.);
-			   worldPos=(Mmatrix*vec4(position, 1.)).zyx;
+		
 			   trueWorldPos=(Mmatrix*vec4(position, 1.)).xyz;
 			   variedPosition=Pmatrix*Vmatrix*Mmatrix*vec4(position, 1.);
            
@@ -791,13 +791,16 @@ function cellChanged(newpXCell, newpZCell) {
 	gameWorld.reloadGeometry(gl, vertex_buffer, color_buffer, index_buffer);
 	sector1.lightSelf(lights, numLights);
 }
-var view_matrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
-// translating z
-view_matrix[14] = view_matrix[14] - 6; //zoom
 
 /*==================== Rotation ====================*/
 
+
+function scaled(m,s){
+	var tMatrix = transposed([s.x, 0, 0,0, 0, s.y, 0,0, 0, 0, s.z, 0, 0, 0, 0, 1]);
+	var result = multMat4sAsArrays(tMatrix, m);
+	return result;
+}
 function translated(m, delta) {
 	var tMatrix = transposed([1, 0, 0, delta.x, 0, 1, 0, delta.y, 0, 0, 1, delta.z, 0, 0, 0, 1]);
 	var result = multMat4sAsArrays(tMatrix, m);
@@ -830,9 +833,10 @@ function rotatedX(m, ang) {
 
 function lookMatrix(position, yaw, pitch) {
 	var look_matrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-	look_matrix = rotatedX(look_matrix, -pitch)
-	look_matrix = rotatedY(look_matrix, -(-yaw - Math.PI));
-	look_matrix = translated(look_matrix, new vec3(position.z, position.y, position.x).scale(-1));
+	look_matrix=scaled(look_matrix,new vec3(1,1,-1))
+	look_matrix = rotatedX(look_matrix, pitch)
+	look_matrix = rotatedY(look_matrix, -yaw);
+	look_matrix = translated(look_matrix, new vec3(position.x, position.y, position.z).scale(-1));
 	return look_matrix;
 }
 
@@ -1046,13 +1050,13 @@ var animate = function (time) {
 	}
 
 	if (isKeyDown(Keys.w))
-		playerVec.translate(new vec3(dt * 0.01 * Math.cos(-playerAngle), 0, dt * 0.01 * Math.sin(-playerAngle)))
+		playerVec.translate(new vec3(dt * 0.01 * Math.cos(-playerAngle+Math.PI/2), 0, dt * 0.01 * Math.sin(-playerAngle+Math.PI/2)))
 	if (isKeyDown(Keys.a))
-		playerVec.translate(new vec3(-dt * 0.01 * Math.sin(-playerAngle), 0, dt * 0.01 * Math.cos(-playerAngle)))
+		playerVec.translate(new vec3(-dt * 0.01 * Math.sin(-playerAngle+Math.PI/2), 0, dt * 0.01 * Math.cos(-playerAngle+Math.PI/2)))
 	if (isKeyDown(Keys.s))
-		playerVec.translate(new vec3(dt * 0.01 * Math.cos(-playerAngle), 0, dt * 0.01 * Math.sin(-playerAngle)).scale(-1))
+		playerVec.translate(new vec3(dt * 0.01 * Math.cos(-playerAngle+Math.PI/2), 0, dt * 0.01 * Math.sin(-playerAngle+Math.PI/2)).scale(-1))
 	if (isKeyDown(Keys.d))
-		playerVec.translate(new vec3(-dt * 0.01 * Math.sin(-playerAngle), 0, dt * 0.01 * Math.cos(-playerAngle)).scale(-1))
+		playerVec.translate(new vec3(-dt * 0.01 * Math.sin(-playerAngle+Math.PI/2), 0, dt * 0.01 * Math.cos(-playerAngle+Math.PI/2)).scale(-1))
 
 	view_matrix = lookMatrix(playerVec, playerAngle, playerPitch);
 
