@@ -16,7 +16,7 @@ class actor{
         var yawMatrix=matrix4.getYRotationMatrix(yRotation);
         var pitchMatrix=matrix4.getXRotationMatrix(xRotation);
         var translationMatrix=matrix4.getTranslationMatrix(this.position)
-        return new matrix4().toIdentity().leftMultiply(pitchMatrix).leftMultiply(yawMatrix).leftMultiply(translationMatrix);
+        return new matrix4().toIdentity().leftMultiply(translationMatrix).leftMultiply(pitchMatrix).leftMultiply(yawMatrix);
     }
    
 }
