@@ -140,7 +140,7 @@ class mazeMesh { //square
 
 				var worldZCell = floor(size / 2.0) - i;
 
-				if (Math.abs(worldZCell - pXCell) <= 3 && Math.abs(worldXCell - pZCell) <= 3) {
+				if (Math.abs(worldXCell - pXCell) <= 3 && Math.abs(worldZCell - pZCell) <= 3) {
 					if (this.queryMaze(i, j, -1, 0) == 0)
 						this.quads.push(new quad3(new vec3(-subunitScale, height, subunitScale).translate(worldOffset), new vec3(subunitScale, height, subunitScale).translate(worldOffset), new vec3(subunitScale, 0, subunitScale).translate(worldOffset), new vec3(-subunitScale, 0, subunitScale).translate(worldOffset), new vec3(1, 0, 1)));
 
@@ -160,7 +160,7 @@ class mazeMesh { //square
 					//this.quads.push(new quad3(new vec3(-subunitScale,height,subunitScale).translate(worldOffset),new vec3(subunitScale,height,subunitScale).translate(worldOffset),new vec3(subunitScale,height,-subunitScale).translate(worldOffset),new vec3(-subunitScale,height,-subunitScale).translate(worldOffset),new vec3(1,0,0.5 )));
 
 					this.lightsData.push(...new vec3(0, 2.5, 0).translate(worldOffset).toArray());
-				} else if (Math.abs(worldZCell - pXCell) <= 7 && Math.abs(worldXCell - pZCell) <= 7) {
+				} else if (Math.abs(worldXCell - pXCell) <= 7 && Math.abs(worldZCell - pZCell) <= 7) {
 					this.lightsData.push(...new vec3(0, 2.5, 0).translate(worldOffset).toArray());
 				}
 
@@ -810,7 +810,8 @@ function translated(m, delta) {
 function rotatedY(m, ang) {
 	var tMatrix = transposed([
 		Math.cos(ang), 0, Math.sin(ang), 0,
-		0, 1, 0, 0, -Math.sin(ang), 0, Math.cos(ang), 0,
+		0, 1, 0, 0,
+		 -Math.sin(ang), 0, Math.cos(ang), 0,
 		0, 0, 0, 1
 
 	]);
