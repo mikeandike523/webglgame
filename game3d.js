@@ -518,7 +518,7 @@ function loadGame() {
    for(int i=0;i<49;i++){
       if(i<numLights){
       vec3 lightPos = lights[i];
-      lightScale=lightScale+2.6*clamp(1.-length(trueWorldPos-lightPos)/6.8,0.,1.);
+      lightScale=lightScale+0.8*clamp(1.-length(trueWorldPos-lightPos)/6.8,0.,1.);
       }
    }
    float tiling=2.;
@@ -536,10 +536,12 @@ function loadGame() {
 		
 		float dVal=texture2D(fbTex,texVec).x;
 		if(lightTexPos.z<dVal+bias){
-			finalColor=finalColor+3.*(1.-lightTexPos.z)*vec3(1.,1.,1.);
+			finalColor=finalColor+2.*(1.-lightTexPos.z)*vec3(1.,1.,1.);
 		}
 		
 	}
+
+	finalColor=lightVal*vec3(clamp(finalColor.x,0.,1.),clamp(finalColor.y,0.,1.),clamp(finalColor.z,0.,1.));
 
 
 
@@ -1064,11 +1066,11 @@ var animate = function (time) {
 
 	time_old = time;
 
-	/*
+	
 	shadowedLight1.setPosition(playerVec)
 	shadowedLight1.setYaw(playerAngle)
 	shadowedLight1.setPitch(playerPitch)
-	*/
+	
 
 	let primary_draw = (pass) => {
 		if(pass==0){
