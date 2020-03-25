@@ -596,7 +596,7 @@ function loadGame() {
 
 		1, 1, 1, 1, 1, 1, 0,
 		1, 0, 1, 0, 1, 1, 1,
-		1, 0, 1, 0, 0, 0, 1,
+		1, 0, 1, 1, 0, 0, 1,
 		0, 0, 1, 1, 1, 0, 0,
 		1, 1, 1, 1, 0, 1, 0,
 		1, 0, 1, 0, 1, 1, 1,
@@ -839,6 +839,8 @@ function lookMatrix(position, yaw, pitch) {
 	look_matrix=scaled(look_matrix,new vec3(1,1,-1))
 	look_matrix = rotatedX(look_matrix, pitch)
 	look_matrix = rotatedY(look_matrix, -yaw);//-yaw due to flipped z convention, idk
+	//note for later if we want to create model matrices, we do these translations and rotations ina  different order, and we do not flip z (flipped z only for camera space transformations)
+	//therefore yaw and pitch will behave as expected with both postive signs
 	look_matrix = translated(look_matrix, new vec3(position.x, position.y, position.z).scale(-1));
 	return look_matrix;
 }
