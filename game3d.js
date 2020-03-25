@@ -1004,7 +1004,7 @@ class shadowedLight extends actor {
 }
 
 
-var shadowedLight1 = new shadowedLight(new vec3(0,1,0), Math.PI/10, 0, 570, 20, 0.005)
+var shadowedLight1 = new shadowedLight(new vec3(0,1,0), Math.PI/10, 0, 570, 30, 0.005)
 gameWorld.setShadowedLight(shadowedLight1);
 gameWorld.build();
 
