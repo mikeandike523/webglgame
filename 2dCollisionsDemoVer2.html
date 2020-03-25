@@ -127,7 +127,9 @@ function intersectSegments(s1,s2){
     var acnav=Math.abs(acn)
     var adnav=Math.abs(adn)
  
-
+        if(acnav+adnav<0.001)
+        return false;
+        
         var potentialPoint=c.sum(s2.tangential.scaled(acnav/(acnav+adnav)))
     
         var aPP=potentialPoint.difference(a)
