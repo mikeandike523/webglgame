@@ -522,14 +522,29 @@ function loadGame() {
       }
    }
    float tiling=2.;
-   float squareVal=mod(floor(mod(trueWorldPos.x,1.)*tiling)+floor(mod(trueWorldPos.y,1.)*tiling)+floor(mod(trueWorldPos.z,1.)*tiling),2.)<0.001?1.:0.;
+   //float squareVal=mod(floor(mod(trueWorldPos.x,1.)*tiling)+floor(mod(trueWorldPos.y,1.)*tiling)+floor(mod(trueWorldPos.z,1.)*tiling),2.)<0.001?1.:0.;
+float squareVal=1.;
+float row20=floor(mod(trueWorldPos.x*2.,20.));
+float row17=floor(mod(trueWorldPos.x*2.,17.));
+float col20=floor(mod(trueWorldPos.z,20.));
+float col17=floor(mod(trueWorldPos.z,17.));
+float row = floor(mod(trueWorldPos.x*2.,2.));
+float rowPos=mod(trueWorldPos.x,0.5)*2.;
+float colPos=mod(trueWorldPos.z+sin(row*2.)*row*0.5,1.);
+squareVal=1.;
+
+squareVal=1.;
+
+if(rowPos<0.07*(1.+abs(sin(row20))/2.)||rowPos>(1.-0.07)*(1.+abs(sin(row17))/2.))
+squareVal=0.2;
+if(colPos<0.04*(1.+abs(sin(col17))/2.)||colPos>(1.-0.04*(1.+abs(sin(col20))/2.)))
+squareVal=0.2;
 
  
  
    float lightVal=1.-length(trueWorldPos-playerVec)/drawDistance;
-   finalColor=squareVal*lightVal*lightScale*vec3(1.,0.,0.);
-
-
+  finalColor=2.*squareVal*lightVal*vec3(1.,1.,1.);
+/*
    if(isInLightFrustum==1)
   
 	{
@@ -540,8 +555,9 @@ function loadGame() {
 		}
 		
 	}
+	*/
 
-	finalColor=lightVal*vec3(clamp(finalColor.x,0.,1.),clamp(finalColor.y,0.,1.),clamp(finalColor.z,0.,1.));
+	//finalColor=lightVal*vec3(clamp(finalColor.x,0.,1.),clamp(finalColor.y,0.,1.),clamp(finalColor.z,0.,1.));
 
 
 
@@ -1131,7 +1147,7 @@ var animate = function (time) {
 	}
 
 	//gameWorld.reloadGeometry(gl, vertex_buffer, color_buffer, index_buffer)
-	primary_draw(0);
+	//primary_draw(0);
 
 	//loadDebugQuad(gl,vertex_buffer,color_buffer,index_buffer);
 //	drawDebugQuad(gl);
