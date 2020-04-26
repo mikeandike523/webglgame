@@ -1,4 +1,4 @@
-
+//https://www.scratchapixel.com/lessons/3d-basic-rendering/perspective-and-orthographic-projection-matrix/building-basic-perspective-projection-matrix
 const lightRes = 200;
 var pXCell = 0;
 var pZCell = 0;
@@ -503,8 +503,28 @@ class vec3 {
 		var comp = dotProduct(base, this) / base.getMagnitude();
 		return baseDirection().copy().scale(comp);
 	}
+	
 
 }
+
+//use x and z from vec3
+class segment2{
+	constructor(a,b){
+		this.a=a.copy();
+		this.b=b.copy();
+		this.length=b.getDifference(a).getMagnitude()
+		this.tangential=b.getDifference(a).getDirection()
+		this.normal=new vec3(this.tangential.z,-this.tangential.x)
+	}
+	copy(){
+		return new segment3(this.a.copy(),this.b.copy());
+	}
+}
+
+function intersectXZ(){
+
+}
+
 gameWorld = new world();
 var sector1;
 
@@ -836,11 +856,11 @@ function rotatedX(m, ang) {
 
 function lookMatrix(position, yaw, pitch) {
 	var look_matrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+
+	look_matrix = rotatedX(look_matrix, -pitch)
+	look_matrix = rotatedY(look_matrix, yaw); //due to way yaw is defined
 	look_matrix=scaled(look_matrix,new vec3(1,1,-1))
-	look_matrix = rotatedX(look_matrix, pitch)
-	look_matrix = rotatedY(look_matrix, -yaw);//-yaw due to flipped z convention, idk
-	//note for later if we want to create model matrices, we do these translations and rotations ina  different order, and we do not flip z (flipped z only for camera space transformations)
-	//therefore yaw and pitch will behave as expected with both postive signs
+	
 	look_matrix = translated(look_matrix, new vec3(position.x, position.y, position.z).scale(-1));
 	return look_matrix;
 }

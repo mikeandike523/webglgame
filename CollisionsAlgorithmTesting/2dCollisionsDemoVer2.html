@@ -1,0 +1,317 @@
+<html>
+  <head>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.0.0/lib/p5.js"></script>
+    <script >
+
+
+
+
+
+
+
+
+
+var speed=20;
+var px=0;
+var py=0;
+function setup() {
+  createCanvas(500, 500);
+  frameRate(30)
+}
+
+function isWithinTriangle(a,b,c,p){
+
+    var ii=true;
+
+    var ap=p.difference(a)
+    var bp=p.difference(b)
+    var cp=p.difference(c)
+
+    var ab=b.difference(a)
+    var ac=c.difference(a)
+    var angle1=ab.angleBetween(ac)
+    var a11=ap.angleBetween(ab)
+    var a12=ap.angleBetween(ac)
+    var a1=a11+a12;
+    
+    if (a1>angle1+0.001)
+    ii=false;
+
+
+    var ba=a.difference(b)
+    var bc=c.difference(b)
+    var angle2=ba.angleBetween(bc)
+    var a21=bp.angleBetween(ba)
+    var a22=bp.angleBetween(bc)
+    var a2=a21+a22;
+    if(a2>angle2+0.001)
+    ii=false
+
+    var ca=a.difference(c)
+    var cb=b.difference(c)
+    var angle3=cb.angleBetween(ca)
+    var a31=cp.angleBetween(ca)
+    var a32=cp.angleBetween(cb)
+    var a3=a31+a32;
+    if(a3>angle3+0.001)
+    ii=false
+
+    return ii;
+}
+function vec2(x,y){
+    this.x=x;
+    this.y=y;
+    this.copy=()=>{return new vec2(this.x,this.y)}
+    this.magnitude=()=>{return Math.sqrt(this.x*this.x+this.y*this.y)}
+    this.dot=(dottedWith)=>{return this.x*dottedWith.x+this.y*dottedWith.y}
+    this.difference=(origin)=>{return new vec2(this.x-origin.x,this.y-origin.y)}
+    this.sum=(origin)=>{return new vec2(this.x+origin.x,this.y+origin.y)}
+    this.angleBetween=(comparedTo)=>{return Math.acos(this.dot(comparedTo)/(this.magnitude()*comparedTo.magnitude()))}
+    this.becomeVertex=()=>{vertex(this.x,this.y)}
+    this.scaled=(s)=>{return new vec2(s*this.x,s*this.y)}
+    this.normalized=()=>{return this.scaled(1.0/this.magnitude())}
+    this.scalarProj=(base)=>{return this.dot(base)/base.magnitude()}
+    this.vectorProj=(base)=>{return base.normalized().scaled(this.scalarProj(base))}
+}
+
+function drawTriangle(a,b,c,ii){
+    if(ii)
+    fill(255,66,128)
+    else
+    fill(0,192,99)
+
+    beginShape()
+    a.becomeVertex()
+    b.becomeVertex()
+    c.becomeVertex()
+    endShape(CLOSE)
+
+}
+function signOf(num){
+    return num/Math.abs(num)>=0?1:-1;
+}
+function segment(a,b){
+    this.a=a;
+    this.b=b;
+    this.tangential=b.difference(a)
+    this.normal=new vec2(this.tangential.y,-this.tangential.x)
+    this.length=this.tangential.magnitude()
+}
+function intersectSegments(s1,s2){
+    var a=s1.a;
+    var b=s1.b;
+    var c=s2.a;
+    var d=s2.b;
+
+    var ac=c.difference(a)
+    var ad=d.difference(a)
+ 
+    var acn=ac.scalarProj(s1.normal)
+    var adn=ad.scalarProj(s1.normal)
+ 
+
+    var acnv=s1.normal.normalized().scaled(acn)
+    var acnv2=a.sum(acnv)
+
+
+    var adnv=s1.normal.normalized().scaled(adn)
+    var adnv2=a.sum(adnv)
+
+
+
+    if(signOf(acn)==signOf(adn)){
+        
+    return false
+    }
+    else {
+    var acnav=Math.abs(acn)
+    var adnav=Math.abs(adn)
+ 
+        if(acnav+adnav<0.001)
+        return false;
+        
+        var potentialPoint=c.sum(s2.tangential.scaled(acnav/(acnav+adnav)))
+    
+        var aPP=potentialPoint.difference(a)
+        var aPPT=aPP.scalarProj(s1.tangential)
+      
+
+        if(0<aPPT&&aPPT<s1.length){
+            return potentialPoint;
+        }
+
+    }
+
+    return false;
+
+}
+polyPoints=[]
+polySegments=[]
+isRunning=false
+function getCart(x,y){
+    return new vec2(x-250,250-y)
+}
+function isWithinPolygon(pt){
+
+    if(polyPoints.length>=3){
+        var isWithin=false
+    var a=polyPoints[0]
+    for(var i=1;i<polyPoints.length-1;i++){
+        
+        var b=polyPoints[i]
+        var c=polyPoints[i+1]
+        if(isWithinTriangle(a,b,c,pt)){
+            isWithin=true
+        break}
+    }
+    return isWithin
+    }
+    return false
+}
+pa=Math.PI/2
+function draw() {
+    background(100)
+
+
+     //centering
+     translate(250,250);
+    scale(1,-1)
+
+    if(keyIsDown(32)){
+    px=0
+    py=0
+    pa=Math.PI/2
+    }
+
+
+    velVec=new vec2(0,0)
+   if( keyIsDown(LEFT_ARROW))
+    pa+=Math.PI/20;
+    if(keyIsDown(RIGHT_ARROW))
+    pa-=Math.PI/20;
+
+    if(keyIsDown(UP_ARROW))
+    velVec=new vec2(speed*cos(pa),speed*sin(pa))
+    if(keyIsDown(DOWN_ARROW))
+    velVec=new vec2(-speed*cos(pa),-speed*sin(pa))
+
+    //in actual game, we can make an invisible cliision box bigger than the geometry to avoid frustum clipping
+
+    var checkSeg=new segment(new vec2(px,py),new vec2(px,py).sum(velVec));
+ line(checkSeg.a.x,checkSeg.a.y,checkSeg.b.x,checkSeg.b.y)
+ stroke(255,255,0)
+ strokeWeight(10)
+    var ips=[]
+ for(var i=0;i<polySegments.length;i++){
+  
+     var ip=intersectSegments(checkSeg,polySegments[i]);
+    if(ip!==false){
+        ips.push([ip,polySegments[i].tangential,polySegments[i].normal,polySegments[i].a])
+        point(ip.x,ip.y)
+    }
+ }
+   if(ips.length>1){
+    ips.sort(function(a,b){
+        var playerPoint=new vec2(px,py)
+        return b[0].difference(playerPoint).magnitude()-a[0].difference(playerPoint).magnitude()
+    })
+
+   }
+
+   if(ips.length>=1){
+    stroke(89,255,40)
+    strokeWeight(12)
+    var nearestIP=ips[ips.length-1]
+velVec=velVec.vectorProj(nearestIP[1])
+    point(nearestIP[0].x,nearestIP[0].y)
+   }
+
+
+   npx=px+velVec.x;
+    npy=py+velVec.y;
+    var ii=isWithinPolygon(new vec2(npx,npy))
+   if(ii){
+   velVec=new vec2(0,0)
+
+    }
+
+//start with sticky walls
+
+
+    noStroke()
+    fill(100,150,150)
+    ellipse(px,py,15,15)
+
+    stroke(89,22,199)
+    strokeWeight(3)
+
+    dirVec=new vec2(speed*cos(pa),speed*sin(pa))
+
+    line(px,py,px+dirVec.x,py+dirVec.y)
+
+ 
+    px+=velVec.x;
+    py+=velVec.y;
+
+
+    stroke(255,0,0)
+    strokeWeight(7)
+    noFill()
+    for(var i=0;i<polyPoints.length;i++){
+        var pP=polyPoints[i];
+        point(pP.x,pP.y)
+    }
+    // convex triangulation
+    stroke(0,0,255)
+    strokeWeight(3)
+    
+    if(polyPoints.length>=3){
+    var a=polyPoints[0]
+    for(var i=1;i<polyPoints.length-1;i++){
+        
+        var b=polyPoints[i]
+        var c=polyPoints[i+1]
+
+        drawTriangle(a,b,c,ii)
+    }
+    }
+
+ noFill()
+
+ stroke(255,5,111)
+ strokeWeight(2)
+ 
+    
+}
+
+
+function mouseClicked() {
+var cartX=mouseX-250;
+var cartY=250-mouseY;
+polyPoints.push(new vec2(cartX,cartY))
+if(polyPoints.length>=3){
+    while(polySegments.length>0)
+    polySegments.pop()
+    for(var i=0;i<polyPoints.length-1;i++)
+polySegments.push(new segment(polyPoints[i],polyPoints[i+1]))
+    polySegments.push(new segment(polyPoints[polyPoints.length-1],polyPoints[0].copy()))
+
+
+}
+return false
+}
+
+
+
+    </script>
+  </head>
+  <body>
+
+      <style>
+          canvas{
+              border:1px solid black
+          }
+
+      </style>
+  </body>
+</html>
